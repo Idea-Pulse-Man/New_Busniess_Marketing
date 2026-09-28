@@ -23,7 +23,7 @@ Set these in `.env` locally and in Vercel → Project → Settings → Environme
 | `DATABASE_URL` | Supabase **transaction pooler** URL (port 6543) + `?pgbouncer=true`   |
 | `DIRECT_URL`   | Supabase **session pooler** URL (port 5432)                            |
 | `AUTH_SECRET`  | Long random string (signs admin login cookies)                         |
-| `ADMIN_EMAIL`  | `cat383437@gmail.com`                                                  |
+| `ADMIN_EMAILS` | Optional extra admin emails, comma-separated                           |
 
 Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Vercel builds do **not**
 touch the database — apply new migrations in `prisma/migrations` yourself with `npm run db:migrate`
@@ -35,7 +35,7 @@ Row Level Security is enabled on all tables, so they are not readable through Su
 | URL             | Who            | What                                                          |
 | --------------- | -------------- | ------------------------------------------------------------- |
 | `/`             | Everyone       | Business intro, how it works, FAQ, application form           |
-| `/admin/signup` | Admin (once)   | Create the admin account — only `ADMIN_EMAIL` is accepted     |
+| `/admin/signup` | Admin (once)   | Create an admin account — only allowed admin emails accepted  |
 | `/admin/login`  | Admin          | Log in                                                        |
 | `/admin`        | Admin          | Applications table                                            |
 
@@ -51,4 +51,5 @@ per-row Approve / Decline / Undo, click a name for full details, CSV export.
 
 - All landing-page wording (brand name, about text, steps, FAQ): `src/lib/site.ts`
 - Experience options and country list: `src/lib/options.ts`
-- Admin email: `ADMIN_EMAIL` in `.env`
+- Admin emails: `ADMIN_EMAILS` list in `src/lib/session.ts` (currently cat383437@gmail.com and
+  goldenstar0124@gmail.com); each admin signs up once at `/admin/signup`
