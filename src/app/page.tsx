@@ -153,9 +153,12 @@ export default function Home() {
           <p>
             © {new Date().getFullYear()} {site.name}. All rights reserved.
           </p>
-          <a href={`mailto:${site.contactEmail}`} className="hover:text-slate-900">
-            {site.contactEmail}
-          </a>
+          <p>
+            {site.contactLabel}:{" "}
+            <a href={`mailto:${site.contactEmail}`} className="hover:text-slate-900">
+              {site.contactEmail}
+            </a>
+          </p>
         </div>
       </footer>
     </div>

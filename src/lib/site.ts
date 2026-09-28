@@ -5,7 +5,8 @@ export const site = {
   tagline: "Real work. Real pay. No experience required.",
   description:
     "We're a new kind of talent partner. We work with growing businesses that need reliable people, and we train and place motivated beginners into those roles — remotely, from anywhere.",
-  contactEmail: "hello@example.com",
+  contactLabel: "Admin",
+  contactEmail: "goldenstar0124@gmail.com",
 
   stats: [
     { value: "0", label: "Years of experience needed" },

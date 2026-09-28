@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const email = await requireAdmin();
-  const apps = await db.application.findMany({ orderBy: { createdAt: "desc" } });
+  // Unconfirmed emails may be fake or mistyped; admins only see applications whose email was confirmed.
+  const apps = await db.application.findMany({ where: { emailVerified: true }, orderBy: { createdAt: "desc" } });
 
   const rows: Row[] = apps.map((a) => ({
     id: a.id,

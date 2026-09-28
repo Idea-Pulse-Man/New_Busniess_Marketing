@@ -12,17 +12,22 @@ export function ApplyForm() {
   // React resets the form after an action; feed back what was typed so nothing is lost.
   const v = state.status === "error" ? state.values : undefined;
 
-  if (state.status === "success") {
+  if (state.status === "sent") {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-2xl text-white">
-          ✓
+      <div className="rounded-2xl border border-brand-100 bg-brand-50 p-8 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-2xl text-white">
+          ✉
         </div>
-        <h3 className="text-xl font-semibold text-emerald-900">
-          Thanks{state.name ? `, ${state.name}` : ""}! Your application is in.
+        <h3 className="text-xl font-semibold text-slate-900">
+          Almost done{state.name ? `, ${state.name}` : ""}! Check your email.
         </h3>
-        <p className="mt-2 text-emerald-800">
-          We review every application personally and will reply by email, usually within 48 hours.
+        <p className="mt-2 text-slate-700">
+          We sent a confirmation link to{" "}
+          {state.email ? <span className="font-medium text-slate-900">{state.email}</span> : "your email"}. Click it
+          to send your application — we can&apos;t review it until you do.
+        </p>
+        <p className="mt-2 text-sm text-slate-500">
+          Not there? Check your spam folder. The link expires in 24 hours.
         </p>
       </div>
     );
