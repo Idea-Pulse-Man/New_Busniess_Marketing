@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #d9e6ff;
+  --color-brand-500: #2f6bff;
+  --color-brand-600: #1f55e6;
+  --color-brand-700: #1a45b8;
+  --color-ink: #0f172a;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #ffffff;
+  color: var(--color-ink);
+}
+
+@utility input {
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+}
+
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-slate-700;
+}
+
+@utility btn {
+  @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700;
+}
+
+@utility btn-ghost {
+  @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+}
