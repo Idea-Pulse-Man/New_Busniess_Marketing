@@ -28,8 +28,15 @@ model Application {
 }
 
 model Admin {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
-  createdAt    DateTime @default(now())
+  // Authenticator (TOTP). Secret is created on first login; enabled once a code is confirmed.
+  totpSecret   String?
+  totpEnabled  Boolean   @default(false)
+  totpLastStep Int? // last accepted time step, blocks code reuse
+  // Brute-force protection for password + code
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime  @default(now())
 }

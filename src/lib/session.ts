@@ -2,15 +2,21 @@
 import { SignJWT, jwtVerify } from "jose";
 
 export const SESSION_COOKIE = "admin_session";
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-// Emails allowed to sign up / log in to /admin. Each gets its own account.
+// "mfa": password checked, authenticator code still required. "full": fully logged in.
+export type SessionStage = "mfa" | "full";
+export type Session = { email: string; stage: SessionStage };
+
+export const SESSION_MAX_AGE: Record<SessionStage, number> = {
+  mfa: 60 * 10, // 10 minutes to enter the code
+  full: 60 * 60 * 24 * 7, // 7 days
+};
+
+// The only emails that can log in to /admin. Accounts are created with `npm run admin`.
 const ADMIN_EMAILS = ["cat383437@gmail.com", "goldenstar0124@gmail.com"];
 
-/** Built-in list plus any extra comma-separated emails from the ADMIN_EMAILS env var. */
 export function isAdminEmail(email: string) {
-  const extra = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "").split(",");
-  return [...ADMIN_EMAILS, ...extra].some((e) => e.trim().toLowerCase() === email);
+  return ADMIN_EMAILS.includes(email);
 }
 
 function secretKey() {
@@ -21,21 +27,23 @@ function secretKey() {
   return new TextEncoder().encode(secret);
 }
 
-export async function signSession(email: string) {
-  return new SignJWT({ email })
+export async function signSession({ email, stage }: Session) {
+  return new SignJWT({ email, stage })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_MAX_AGE}s`)
+    .setExpirationTime(`${SESSION_MAX_AGE[stage]}s`)
     .sign(secretKey());
 }
 
-/** Returns the admin email if the token is valid and belongs to the admin. */
-export async function verifySession(token: string | undefined) {
+/** Returns the session if the token is valid and belongs to an admin. */
+export async function verifySession(token: string | undefined): Promise<Session | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey());
-    const email = typeof payload.email === "string" ? payload.email : null;
-    return email && isAdminEmail(email) ? email : null;
+    const { email, stage } = payload;
+    if (typeof email !== "string" || !isAdminEmail(email)) return null;
+    if (stage !== "mfa" && stage !== "full") return null;
+    return { email, stage };
   } catch {
     return null;
   }

@@ -1,20 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
-const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/signup"];
-
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isAuthPage = PUBLIC_ADMIN_PATHS.includes(pathname);
-  const admin = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
+  const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
+  const go = (path: string) => NextResponse.redirect(new URL(path, req.url));
 
-  if (!admin && !isAuthPage) {
-    return NextResponse.redirect(new URL("/admin/login", req.url));
+  if (session?.stage === "full") {
+    // Fully logged in: skip the login and authenticator pages.
+    return pathname === "/admin/login" || pathname === "/admin/verify" ? go("/admin") : NextResponse.next();
   }
-  if (admin && isAuthPage) {
-    return NextResponse.redirect(new URL("/admin", req.url));
+  if (session?.stage === "mfa") {
+    // Password OK, authenticator code still needed.
+    return pathname === "/admin/verify" || pathname === "/admin/login" ? NextResponse.next() : go("/admin/verify");
   }
-  return NextResponse.next();
+  return pathname === "/admin/login" ? NextResponse.next() : go("/admin/login");
 }
 
 export const config = {

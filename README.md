@@ -11,6 +11,7 @@ Built with Next.js 15 (App Router), Tailwind CSS 4, Prisma + Supabase (Postgres)
 npm install
 cp .env.example .env        # paste Supabase URLs, set AUTH_SECRET
 npm run db:migrate          # creates the tables in Supabase
+npm run admin -- set-password you@example.com 'your-password'
 npm run dev                 # http://localhost:3000
 ```
 
@@ -23,7 +24,6 @@ Set these in `.env` locally and in Vercel → Project → Settings → Environme
 | `DATABASE_URL` | Supabase **transaction pooler** URL (port 6543) + `?pgbouncer=true`   |
 | `DIRECT_URL`   | Supabase **session pooler** URL (port 5432)                            |
 | `AUTH_SECRET`  | Long random string (signs admin login cookies)                         |
-| `ADMIN_EMAILS` | Optional extra admin emails, comma-separated                           |
 
 Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Vercel builds do **not**
 touch the database — apply new migrations in `prisma/migrations` yourself with `npm run db:migrate`
@@ -35,9 +35,26 @@ Row Level Security is enabled on all tables, so they are not readable through Su
 | URL             | Who            | What                                                          |
 | --------------- | -------------- | ------------------------------------------------------------- |
 | `/`             | Everyone       | Business intro, how it works, FAQ, application form           |
-| `/admin/signup` | Admin (once)   | Create an admin account — only allowed admin emails accepted  |
-| `/admin/login`  | Admin          | Log in                                                        |
+| `/admin/login`  | Admin          | Log in with email + password                                  |
+| `/admin/verify` | Admin          | Authenticator code (first login: scan QR code to set it up)   |
 | `/admin`        | Admin          | Applications table                                            |
+
+## Admin accounts
+
+There is no sign-up page. Admin login is **email + password + authenticator app code** (TOTP —
+Google Authenticator, Microsoft Authenticator, Authy, 1Password…). On an admin's first login they
+must scan a QR code to set up their authenticator before they can reach the dashboard.
+After 5 wrong passwords/codes the account is locked for 15 minutes.
+
+Manage accounts from a terminal (with `.env` pointing at Supabase):
+
+```bash
+npm run admin -- list                                   # show admins + authenticator status
+npm run admin -- set-password <email> '<password>'      # create account or change password
+npm run admin -- reset-2fa <email>                      # lost phone: set up authenticator again
+```
+
+Only emails in the `ADMIN_EMAILS` list in `src/lib/session.ts` can log in.
 
 **Application form fields:** name, email, country, address, experience
 (“No experience” is the default and highlighted as welcome), optional note.
@@ -52,4 +69,4 @@ per-row Approve / Decline / Undo, click a name for full details, CSV export.
 - All landing-page wording (brand name, about text, steps, FAQ): `src/lib/site.ts`
 - Experience options and country list: `src/lib/options.ts`
 - Admin emails: `ADMIN_EMAILS` list in `src/lib/session.ts` (currently cat383437@gmail.com and
-  goldenstar0124@gmail.com); each admin signs up once at `/admin/signup`
+  goldenstar0124@gmail.com)
