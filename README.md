@@ -25,8 +25,9 @@ Set these in `.env` locally and in Vercel → Project → Settings → Environme
 | `AUTH_SECRET`  | Long random string (signs admin login cookies)                         |
 | `ADMIN_EMAIL`  | `cat383437@gmail.com`                                                  |
 
-Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Every Vercel build runs
-`prisma migrate deploy`, so new migrations in `prisma/migrations` are applied automatically.
+Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Vercel builds do **not**
+touch the database — apply new migrations in `prisma/migrations` yourself with `npm run db:migrate`
+(with `.env` pointing at Supabase) before deploying code that needs them.
 Row Level Security is enabled on all tables, so they are not readable through Supabase's public API.
 
 ## Pages
