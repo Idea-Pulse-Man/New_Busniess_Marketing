@@ -4,9 +4,9 @@ import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sendVerificationCode } from "@/lib/mail";
-import { COUNTRIES, EXPERIENCE_OPTIONS } from "@/lib/options";
+import { ageFrom, COUNTRIES, EXPERIENCE_OPTIONS, MAX_AGE, MIN_AGE } from "@/lib/options";
 
-export type ApplyValues = Record<"name" | "email" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
+export type ApplyValues = Record<"name" | "email" | "birthday" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
 
 export type ApplyState =
   | { status: "idle" }
@@ -72,12 +72,13 @@ function firstNameOf(name: string) {
 export async function submitApplication(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const birthday = String(formData.get("birthday") ?? "").trim();
   const country = String(formData.get("country") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const experience = String(formData.get("experience") ?? "").trim();
   const experienceDetail = String(formData.get("experienceDetail") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
-  const values: ApplyValues = { name, email, country, address, experience, experienceDetail, note };
+  const values: ApplyValues = { name, email, birthday, country, address, experience, experienceDetail, note };
 
   // Honeypot: real people never see or fill this field.
   if (String(formData.get("website") ?? "").trim()) {
@@ -87,6 +88,10 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
   const fields: Record<string, string> = {};
   if (name.length < 2 || name.length > 100) fields.name = "Please enter your full name.";
   if (!EMAIL_RE.test(email) || email.length > 200) fields.email = "Please enter a valid email address.";
+  const age = ageFrom(birthday);
+  if (age === null) fields.birthday = "Please enter your date of birth.";
+  else if (age < MIN_AGE) fields.birthday = `You must be at least ${MIN_AGE} years old to apply.`;
+  else if (age > MAX_AGE) fields.birthday = "Please check your date of birth.";
   if (!COUNTRIES.includes(country)) fields.country = "Please choose your country.";
   if (address.length < 5 || address.length > 300) fields.address = "Please enter your address.";
   if (!EXPERIENCE_OPTIONS.some((o) => o.value === experience)) fields.experience = "Please choose one option.";
@@ -103,7 +108,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     fields: { email: "Already applied with this email." },
     values,
   };
-  const details = { name, email, country, address, experience, experienceDetail, note };
+  const details = { name, email, birthday, country, address, experience, experienceDetail, note };
   const firstName = firstNameOf(name);
 
   // An unconfirmed application for this email is replaced, so someone who typed another

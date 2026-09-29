@@ -3,12 +3,13 @@
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteApplications, setStatus } from "./actions";
-import { EXPERIENCE_OPTIONS, EXPERIENCE_SHORT, STATUSES, type Status } from "@/lib/options";
+import { ageFrom, EXPERIENCE_OPTIONS, EXPERIENCE_SHORT, STATUSES, type Status } from "@/lib/options";
 
 export type Row = {
   id: string;
   name: string;
   email: string;
+  birthday: string;
   country: string;
   address: string;
   experience: string;
@@ -18,11 +19,12 @@ export type Row = {
   createdAt: string;
 };
 
-type ColumnKey = "email" | "country" | "address" | "experience" | "status" | "createdAt";
+type ColumnKey = "email" | "birthday" | "country" | "address" | "experience" | "status" | "createdAt";
 type SortKey = "newest" | "oldest" | "name" | "country";
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "email", label: "Email" },
+  { key: "birthday", label: "Birthday" },
   { key: "country", label: "Country" },
   { key: "address", label: "Address" },
   { key: "experience", label: "Experience" },
@@ -194,10 +196,10 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
 
   function exportCsv() {
     const source = selected.size ? rows.filter((r) => selected.has(r.id)) : filtered;
-    const header = ["Name", "Email", "Country", "Address", "Experience", "Previous jobs", "Status", "Applied", "Note"];
+    const header = ["Name", "Email", "Birthday", "Country", "Address", "Experience", "Previous jobs", "Status", "Applied", "Note"];
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = source.map((r) =>
-      [r.name, r.email, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.experienceDetail, r.status, r.createdAt, r.note]
+      [r.name, r.email, r.birthday, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.experienceDetail, r.status, r.createdAt, r.note]
         .map(esc)
         .join(","),
     );
@@ -381,6 +383,9 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                       <a href={`mailto:${r.email}`} className="text-slate-600 hover:text-brand-700">{r.email}</a>
                     </td>
                   )}
+                  {visible.has("birthday") && (
+                    <td className="whitespace-nowrap px-3 py-3 text-slate-600">{birthdayText(r.birthday)}</td>
+                  )}
                   {visible.has("country") && <td className="whitespace-nowrap px-3 py-3 text-slate-600">{r.country}</td>}
                   {visible.has("address") && (
                     <td className="max-w-56 truncate px-3 py-3 text-slate-600" title={r.address}>{r.address}</td>
@@ -433,6 +438,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                     <td colSpan={colSpan - 1} className="px-3 py-4">
                       <dl className="grid gap-3 text-sm sm:grid-cols-3">
                         <Detail label="Email" value={r.email} />
+                        <Detail label="Birthday" value={birthdayText(r.birthday)} />
                         <Detail label="Country" value={r.country} />
                         <Detail label="Experience" value={EXPERIENCE_SHORT[r.experience] ?? r.experience} />
                         <Detail label="Previous jobs" value={r.experienceDetail || "—"} wide />
@@ -561,4 +567,12 @@ function ColumnPicker({ visible, onChange }: { visible: Set<ColumnKey>; onChange
 
 function cap(s: string) {
   return s[0].toUpperCase() + s.slice(1);
+}
+
+// "12 Apr 1995 (31)"; older applications have no birthday.
+function birthdayText(birthday: string) {
+  const age = ageFrom(birthday);
+  if (age === null) return "—";
+  const date = new Date(`${birthday}T00:00:00Z`).toLocaleDateString(undefined, { timeZone: "UTC", dateStyle: "medium" });
+  return `${date} (${age})`;
 }

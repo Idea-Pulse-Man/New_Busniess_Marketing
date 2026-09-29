@@ -63,18 +63,32 @@ export function ApplyForm() {
         </Field>
       </div>
 
-      <Field id="country" label="Country" error={err.country}>
-        <select id="country" name="country" className="input" defaultValue={v?.country ?? ""} required>
-          <option value="" disabled>
-            Select your country
-          </option>
-          {COUNTRIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field id="birthday" label="Date of birth" error={err.birthday}>
+          <input
+            id="birthday"
+            name="birthday"
+            type="date"
+            defaultValue={v?.birthday}
+            className="input"
+            autoComplete="bday"
+            min="1900-01-01"
+            required
+          />
+        </Field>
+        <Field id="country" label="Country" error={err.country}>
+          <select id="country" name="country" className="input" defaultValue={v?.country ?? ""} required>
+            <option value="" disabled>
+              Select your country
             </option>
-          ))}
-        </select>
-      </Field>
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
 
       <Field id="address" label="Address" error={err.address}>
         <input

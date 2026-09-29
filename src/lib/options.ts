@@ -46,3 +46,17 @@ export const COUNTRIES = [
   "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay",
   "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
 ];
+
+export const MIN_AGE = 16;
+export const MAX_AGE = 100;
+
+// Age in whole years for a YYYY-MM-DD birthday, or null if it isn't a real calendar date.
+export function ageFrom(birthday: string, today = new Date()): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthday);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d) return null;
+  const [ty, tm, td] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
+  return ty - y - (tm < mo || (tm === mo && td < d) ? 1 : 0);
+}
