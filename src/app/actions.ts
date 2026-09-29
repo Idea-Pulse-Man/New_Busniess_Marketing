@@ -93,9 +93,11 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     console.error("Failed to send verification email", e);
     if (dev) return { status: "sent", name: firstName, email };
     await db.application.update({ where: { email }, data: { verifySentAt: null } });
+    // Short, non-sensitive reason (e.g. EAUTH, ETIMEDOUT, CONFIG) so failures can be diagnosed from the page.
+    const code = (e as { code?: string })?.code ?? (String(e).includes("must be set") ? "CONFIG" : "UNKNOWN");
     return {
       status: "error",
-      message: "We couldn't send a confirmation email right now. Please check your address and try again.",
+      message: `We couldn't send a confirmation email right now. Please check your address and try again. (${code})`,
       values,
     };
   }
