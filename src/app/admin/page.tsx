@@ -20,6 +20,7 @@ export default async function AdminPage() {
     country: a.country,
     address: a.address,
     experience: a.experience,
+    experienceDetail: a.experienceDetail,
     note: a.note,
     status: a.status as Row["status"],
     createdAt: a.createdAt.toISOString(),

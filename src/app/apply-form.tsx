@@ -88,31 +88,37 @@ export function ApplyForm() {
         />
       </Field>
 
-      <fieldset>
-        <legend className="label">Work experience</legend>
-        <p className="-mt-1 mb-3 text-sm text-slate-500">
-          Be honest — <span className="font-medium text-brand-700">no experience is perfectly fine</span>. We
-          train you.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {EXPERIENCE_OPTIONS.map((o) => (
-            <label
-              key={o.value}
-              className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-300 px-4 py-3 text-sm transition hover:border-brand-500 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:ring-2 has-[:checked]:ring-brand-100"
-            >
-              <input
-                type="radio"
-                name="experience"
-                value={o.value}
-                defaultChecked={o.value === (v?.experience ?? "none")}
-                className="h-4 w-4 accent-brand-600"
-              />
-              <span className="font-medium text-slate-800">{o.label}</span>
-            </label>
-          ))}
-        </div>
-        {err.experience && <p className="mt-1.5 text-sm text-red-600">{err.experience}</p>}
-      </fieldset>
+      <div className="space-y-3">
+        <Field id="experience" label="Work experience" error={err.experience}>
+          <p className="-mt-1 mb-2 text-sm text-slate-500">
+            Be honest — <span className="font-medium text-brand-700">no experience is perfectly fine</span>. We
+            train you.
+          </p>
+          <select
+            id="experience"
+            name="experience"
+            className="input"
+            defaultValue={v?.experience ?? "none"}
+            required
+          >
+            {EXPERIENCE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field id="experienceDetail" label="Previous jobs or experience (optional)" error={err.experienceDetail}>
+          <input
+            id="experienceDetail"
+            name="experienceDetail"
+            defaultValue={v?.experienceDetail}
+            maxLength={500}
+            className="input"
+            placeholder="e.g. 2 years in customer support, some freelance data entry"
+          />
+        </Field>
+      </div>
 
       <Field id="note" label="Anything you'd like us to know? (optional)" error={err.note}>
         <textarea
