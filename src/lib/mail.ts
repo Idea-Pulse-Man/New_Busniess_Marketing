@@ -5,11 +5,20 @@ import { site } from "@/lib/site";
 // Sends through a Gmail account using an app password (Google Account → Security → App passwords).
 let transport: Transporter | undefined;
 
+// Tolerates values pasted into a hosting dashboard with surrounding quotes or stray spaces.
+function envValue(name: string) {
+  return (process.env[name] ?? "").trim().replace(/^(["'])(.*)\1$/, "$2").trim();
+}
+
+function gmailUser() {
+  return envValue("GMAIL_USER");
+}
+
 function getTransport() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  const user = gmailUser();
+  const pass = envValue("GMAIL_APP_PASSWORD").replace(/\s+/g, "");
   if (!user || !pass) throw new Error("GMAIL_USER and GMAIL_APP_PASSWORD must be set to send email.");
-  transport ??= nodemailer.createTransport({ service: "gmail", auth: { user, pass: pass.replace(/\s+/g, "") } });
+  transport ??= nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
   return transport;
 }
 
@@ -27,7 +36,7 @@ function escapeHtml(s: string) {
 export async function sendVerificationEmail(to: string, firstName: string, link: string) {
   const hi = firstName ? `Hi ${firstName},` : "Hi,";
   await getTransport().sendMail({
-    from: { name: site.name, address: process.env.GMAIL_USER! },
+    from: { name: site.name, address: gmailUser() },
     to,
     subject: `Confirm your email to finish your ${site.name} application`,
     text: `${hi}\n\nThanks for applying to ${site.name}. Please confirm your email address to send your application:\n\n${link}\n\nThis link expires in 24 hours. If you didn't apply, you can ignore this email.\n`,
