@@ -71,6 +71,8 @@ terminal, and the form still moves on if the email can't be sent (e.g. a network
 **Admin dashboard:** search, filters (status, experience, country), sort, show/hide columns,
 row checkboxes + select-all (page, or all matching), bulk Approve / Decline / Mark pending / Delete,
 per-row Approve / Decline / Undo, click a name for full details, CSV export.
+The list updates itself (every 10s while open, every minute in a background tab); new applications
+get a "New" badge and show as a count in the browser tab title.
 
 ## Customising
 

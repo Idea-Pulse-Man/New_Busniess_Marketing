@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { deleteApplications, setStatus } from "./actions";
 import { EXPERIENCE_OPTIONS, EXPERIENCE_SHORT, STATUSES, type Status } from "@/lib/options";
 
@@ -29,6 +30,8 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
 ];
 
 const PAGE_SIZE = 50;
+const REFRESH_MS = 10_000;
+const NEW_HIGHLIGHT_MS = 60_000;
 
 const STATUS_STYLE: Record<Status, string> = {
   pending: "bg-amber-50 text-amber-700 ring-amber-200",
@@ -48,6 +51,54 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [, startRefresh] = useTransition();
+  const [refreshing, startManualRefresh] = useTransition();
+  const router = useRouter();
+  const [updatedAt, setUpdatedAt] = useState(() => Date.now());
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const knownIds = useRef<Set<string> | null>(null);
+
+  // Live updates: re-fetch the list from the server every 10s while the tab is visible (every
+  // minute in a background tab), and right away when the admin comes back to the tab.
+  // Filters, selection, open rows etc. are kept.
+  useEffect(() => {
+    let ticks = 0;
+    const refresh = () => startRefresh(() => router.refresh());
+    const timer = setInterval(() => {
+      ticks++;
+      if (document.visibilityState === "visible" || ticks % 6 === 0) refresh();
+    }, REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [router]);
+
+  // Show the number of new applications in the browser tab title.
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = newIds.size ? `(${newIds.size}) ${base}` : base;
+  }, [newIds]);
+
+  // Spot applications that arrived since the last refresh and highlight them for a while.
+  useEffect(() => {
+    setUpdatedAt(Date.now());
+    const ids = new Set(rows.map((r) => r.id));
+    const known = knownIds.current;
+    knownIds.current = ids;
+    if (!known) return;
+    const added = rows.filter((r) => !known.has(r.id)).map((r) => r.id);
+    if (!added.length) return;
+    setNewIds((prev) => new Set([...prev, ...added]));
+    flash(`${added.length} new application${added.length === 1 ? "" : "s"}`);
+    setTimeout(() => {
+      setNewIds((prev) => new Set([...prev].filter((id) => !added.includes(id))));
+    }, NEW_HIGHLIGHT_MS);
+  }, [rows]);
 
   const countries = useMemo(() => [...new Set(rows.map((r) => r.country))].sort(), [rows]);
 
@@ -163,6 +214,8 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
 
   return (
     <div className="mt-6 space-y-4">
+      <LiveStatus updatedAt={updatedAt} refreshing={refreshing} onRefresh={() => startManualRefresh(() => router.refresh())} />
+
       {/* Summary cards (click to filter) */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="Total" value={counts.total} active={status === "all"} onClick={() => setStatusFilter("all")} />
@@ -293,7 +346,15 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
             )}
             {pageRows.map((r) => (
               <Fragment key={r.id}>
-                <tr className={selected.has(r.id) ? "bg-brand-50/60" : "hover:bg-slate-50"}>
+                <tr
+                  className={
+                    selected.has(r.id)
+                      ? "bg-brand-50/60"
+                      : newIds.has(r.id)
+                        ? "bg-emerald-50/70 transition-colors hover:bg-emerald-50"
+                        : "transition-colors hover:bg-slate-50"
+                  }
+                >
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -308,6 +369,11 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                       {r.name}
                     </button>
                     {r.note && <span className="ml-1.5 text-xs text-slate-400" title="Has a note">✎</span>}
+                    {newIds.has(r.id) && (
+                      <span className="ml-2 inline-flex rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        New
+                      </span>
+                    )}
                   </td>
                   {visible.has("email") && (
                     <td className="px-3 py-3">
@@ -396,6 +462,43 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
           {toast}
         </div>
       )}
+    </div>
+  );
+}
+
+function LiveStatus({ updatedAt, refreshing, onRefresh }: { updatedAt: number; refreshing: boolean; onRefresh: () => void }) {
+  // Own ticking clock, so the big table doesn't re-render every second.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const secs = Math.max(0, Math.round((now - updatedAt) / 1000));
+  const ago = secs < 5 ? "just now" : secs < 60 ? `${secs}s ago` : `${Math.floor(secs / 60)}m ago`;
+
+  return (
+    <div className="flex items-center justify-end gap-3 text-xs text-slate-500">
+      <span className="inline-flex items-center gap-1.5" title="The list updates automatically">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        </span>
+        Live · updated {ago}
+      </span>
+      <button
+        onClick={onRefresh}
+        disabled={refreshing}
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-slate-600 ring-1 ring-slate-200 hover:bg-white hover:text-slate-900 disabled:opacity-60"
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true">
+          <path
+            fillRule="evenodd"
+            d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+            clipRule="evenodd"
+          />
+        </svg>
+        {refreshing ? "Refreshing" : "Refresh"}
+      </button>
     </div>
   );
 }
