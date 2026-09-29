@@ -18,6 +18,7 @@ model Application {
   country    String
   address    String
   experience String // none | under1 | 1to3 | 3plus
+  experienceDetail String @default("") // previous jobs, in the applicant's words
   note       String   @default("")
   status     String   @default("pending") // pending | approved | declined
   // Email confirmation. Unconfirmed applications are hidden from admins and can be

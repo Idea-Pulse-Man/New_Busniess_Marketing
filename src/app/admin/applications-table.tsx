@@ -12,6 +12,7 @@ export type Row = {
   country: string;
   address: string;
   experience: string;
+  experienceDetail: string;
   note: string;
   status: Status;
   createdAt: string;
@@ -118,7 +119,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
         (status === "all" || r.status === status) &&
         (experience === "all" || r.experience === experience) &&
         (country === "all" || r.country === country) &&
-        (!q || [r.name, r.email, r.country, r.address, r.note].some((f) => f.toLowerCase().includes(q))),
+        (!q || [r.name, r.email, r.country, r.address, r.experienceDetail, r.note].some((f) => f.toLowerCase().includes(q))),
     );
     const byDate = (a: Row, b: Row) => a.createdAt.localeCompare(b.createdAt);
     list.sort(
@@ -193,10 +194,10 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
 
   function exportCsv() {
     const source = selected.size ? rows.filter((r) => selected.has(r.id)) : filtered;
-    const header = ["Name", "Email", "Country", "Address", "Experience", "Status", "Applied", "Note"];
+    const header = ["Name", "Email", "Country", "Address", "Experience", "Previous jobs", "Status", "Applied", "Note"];
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = source.map((r) =>
-      [r.name, r.email, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.status, r.createdAt, r.note]
+      [r.name, r.email, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.experienceDetail, r.status, r.createdAt, r.note]
         .map(esc)
         .join(","),
     );
@@ -245,7 +246,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, email, country, address, notes…"
+            placeholder="Search name, email, country, address, jobs, notes…"
             className="input pl-9"
             aria-label="Search applications"
           />
@@ -385,10 +386,15 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                     <td className="max-w-56 truncate px-3 py-3 text-slate-600" title={r.address}>{r.address}</td>
                   )}
                   {visible.has("experience") && (
-                    <td className="whitespace-nowrap px-3 py-3">
-                      <span className={r.experience === "none" ? "font-medium text-brand-700" : "text-slate-600"}>
+                    <td className="px-3 py-3">
+                      <span className={`whitespace-nowrap ${r.experience === "none" ? "font-medium text-brand-700" : "text-slate-600"}`}>
                         {EXPERIENCE_SHORT[r.experience] ?? r.experience}
                       </span>
+                      {r.experienceDetail && (
+                        <div className="max-w-56 truncate text-xs text-slate-400" title={r.experienceDetail}>
+                          {r.experienceDetail}
+                        </div>
+                      )}
                     </td>
                   )}
                   {visible.has("status") && (
@@ -429,6 +435,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                         <Detail label="Email" value={r.email} />
                         <Detail label="Country" value={r.country} />
                         <Detail label="Experience" value={EXPERIENCE_SHORT[r.experience] ?? r.experience} />
+                        <Detail label="Previous jobs" value={r.experienceDetail || "—"} wide />
                         <Detail label="Address" value={r.address} wide />
                         <Detail label="Note" value={r.note || "—"} wide />
                       </dl>

@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { sendVerificationCode } from "@/lib/mail";
 import { COUNTRIES, EXPERIENCE_OPTIONS } from "@/lib/options";
 
-export type ApplyValues = Record<"name" | "email" | "country" | "address" | "experience" | "note", string>;
+export type ApplyValues = Record<"name" | "email" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
 
 export type ApplyState =
   | { status: "idle" }
@@ -75,8 +75,9 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
   const country = String(formData.get("country") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const experience = String(formData.get("experience") ?? "").trim();
+  const experienceDetail = String(formData.get("experienceDetail") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
-  const values: ApplyValues = { name, email, country, address, experience, note };
+  const values: ApplyValues = { name, email, country, address, experience, experienceDetail, note };
 
   // Honeypot: real people never see or fill this field.
   if (String(formData.get("website") ?? "").trim()) {
@@ -89,6 +90,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
   if (!COUNTRIES.includes(country)) fields.country = "Please choose your country.";
   if (address.length < 5 || address.length > 300) fields.address = "Please enter your address.";
   if (!EXPERIENCE_OPTIONS.some((o) => o.value === experience)) fields.experience = "Please choose one option.";
+  if (experienceDetail.length > 500) fields.experienceDetail = "Please keep this under 500 characters.";
   if (note.length > 1000) fields.note = "Please keep this under 1000 characters.";
 
   if (Object.keys(fields).length) {
@@ -101,7 +103,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     fields: { email: "Already applied with this email." },
     values,
   };
-  const details = { name, email, country, address, experience, note };
+  const details = { name, email, country, address, experience, experienceDetail, note };
   const firstName = firstNameOf(name);
 
   // An unconfirmed application for this email is replaced, so someone who typed another
