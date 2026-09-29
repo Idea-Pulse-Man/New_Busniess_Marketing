@@ -22,10 +22,11 @@ model Application {
   status     String   @default("pending") // pending | approved | declined
   // Email confirmation. Unconfirmed applications are hidden from admins and can be
   // replaced by a new application for the same email (so a fake entry never blocks the real owner).
-  emailVerified      Boolean   @default(false)
-  verifyTokenHash    String?   @unique // sha256 of the token in the emailed link
-  verifyTokenExpires DateTime?
-  verifySentAt       DateTime? // throttles resends
+  emailVerified     Boolean   @default(false)
+  verifyCodeHash    String? // HMAC of the 6-digit code emailed to the applicant
+  verifyCodeExpires DateTime?
+  verifyAttempts    Int       @default(0) // wrong codes entered for the current code
+  verifySentAt      DateTime? // throttles resends
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

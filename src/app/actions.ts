@@ -1,34 +1,88 @@
 "use server";
 
-import { createHash, randomBytes } from "node:crypto";
+import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { sendVerificationEmail, siteUrl } from "@/lib/mail";
+import { sendVerificationCode } from "@/lib/mail";
 import { COUNTRIES, EXPERIENCE_OPTIONS } from "@/lib/options";
+
+export type ApplyValues = Record<"name" | "email" | "country" | "address" | "experience" | "note", string>;
 
 export type ApplyState =
   | { status: "idle" }
-  | { status: "sent"; name: string; email: string }
-  | { status: "error"; message: string; fields?: Record<string, string>; values?: Record<string, string> };
+  | { status: "code"; name: string; email: string; values: ApplyValues; notice?: string; at: number }
+  | { status: "error"; message: string; fields?: Record<string, string>; values?: ApplyValues };
+
+export type CodeState =
+  | { status: "idle" }
+  | { status: "verified" }
+  | { status: "resent"; message: string }
+  | { status: "error"; message: string };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const CODE_MINUTES = 15;
+const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 
-export async function submitApplication(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
-  // Honeypot: real people never see or fill this field.
-  if (String(formData.get("website") ?? "").trim()) {
-    return { status: "sent", name: "", email: "" };
-  }
+// Keyed hash, so a leaked database row can't be brute-forced back to the code offline.
+function hashCode(email: string, code: string) {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) throw new Error("AUTH_SECRET is not set");
+  return createHmac("sha256", secret).update(`${email}:${code}`).digest("hex");
+}
 
+function newCode(email: string) {
+  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  return {
+    code,
+    fields: {
+      verifyCodeHash: hashCode(email, code),
+      verifyCodeExpires: new Date(Date.now() + CODE_MINUTES * 60 * 1000),
+      verifyAttempts: 0,
+      verifySentAt: new Date(),
+    },
+  };
+}
+
+// Emails the code. Returns an error message for the applicant, or null when sent.
+async function deliverCode(email: string, firstName: string, code: string): Promise<string | null> {
+  const dev = process.env.NODE_ENV !== "production";
+  // Local testing: the code is also printed, so the flow works even where Gmail is unreachable.
+  if (dev) console.log(`[dev] Confirmation code for ${email}: ${code}`);
+  try {
+    await sendVerificationCode(email, firstName, code, CODE_MINUTES);
+    return null;
+  } catch (e) {
+    console.error("Failed to send verification email", e);
+    if (dev) return null;
+    await db.application.updateMany({ where: { email, emailVerified: false }, data: { verifySentAt: null } });
+    // Short, non-sensitive reason (e.g. EAUTH 535, ETIMEDOUT, CONFIG) so failures can be diagnosed from the page.
+    const err = e as { code?: string; responseCode?: number };
+    const reason =
+      (err?.code ?? (String(e).includes("must be set") ? "CONFIG" : "UNKNOWN")) +
+      (err?.responseCode ? ` ${err.responseCode}` : "");
+    return `We couldn't send a confirmation email right now. Please check your address and try again. (${reason})`;
+  }
+}
+
+function firstNameOf(name: string) {
+  return name.split(" ")[0];
+}
+
+export async function submitApplication(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const country = String(formData.get("country") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const experience = String(formData.get("experience") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
+  const values: ApplyValues = { name, email, country, address, experience, note };
 
-  const values = { name, email, country, address, experience, note };
+  // Honeypot: real people never see or fill this field.
+  if (String(formData.get("website") ?? "").trim()) {
+    return { status: "code", name: "", email, values, at: Date.now() };
+  }
+
   const fields: Record<string, string> = {};
   if (name.length < 2 || name.length > 100) fields.name = "Please enter your full name.";
   if (!EMAIL_RE.test(email) || email.length > 200) fields.email = "Please enter a valid email address.";
@@ -47,27 +101,23 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     fields: { email: "Already applied with this email." },
     values,
   };
+  const details = { name, email, country, address, experience, note };
+  const firstName = firstNameOf(name);
 
   // An unconfirmed application for this email is replaced, so someone who typed another
   // person's address can't stop the real owner from applying.
   const existing = await db.application.findUnique({ where: { email } });
   if (existing?.emailVerified) return alreadyApplied;
+
+  // A code went out moments ago (e.g. they pressed submit twice): keep it, just save any edits.
   if (existing?.verifySentAt && Date.now() - existing.verifySentAt.getTime() < RESEND_COOLDOWN_MS) {
-    return {
-      status: "error",
-      message: "We just sent a confirmation email to this address. Check your inbox and spam folder, or try again in a minute.",
-      values,
-    };
+    const { count } = await db.application.updateMany({ where: { email, emailVerified: false }, data: details });
+    if (!count) return alreadyApplied;
+    return { status: "code", name: firstName, email, values, notice: "We sent you a code a moment ago.", at: Date.now() };
   }
 
-  const token = randomBytes(32).toString("base64url");
-  const verification = {
-    verifyTokenHash: createHash("sha256").update(token).digest("hex"),
-    verifyTokenExpires: new Date(Date.now() + TOKEN_TTL_MS),
-    verifySentAt: new Date(),
-  };
-  const data = { name, email, country, address, experience, note, ...verification };
-
+  const { code, fields: codeFields } = newCode(email);
+  const data = { ...details, ...codeFields };
   if (existing) {
     // Only ever overwrite an unconfirmed application, even if it was confirmed a moment ago.
     const { count } = await db.application.updateMany({ where: { email, emailVerified: false }, data });
@@ -82,28 +132,59 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     }
   }
 
-  const firstName = name.split(" ")[0];
-  const link = `${siteUrl()}/apply/verify?token=${token}`;
-  const dev = process.env.NODE_ENV !== "production";
-  // Local testing: the link is also printed, so the flow works even where Gmail is unreachable.
-  if (dev) console.log(`[dev] Confirmation link for ${email}: ${link}`);
-  try {
-    await sendVerificationEmail(email, firstName, link);
-  } catch (e) {
-    console.error("Failed to send verification email", e);
-    if (dev) return { status: "sent", name: firstName, email };
-    await db.application.update({ where: { email }, data: { verifySentAt: null } });
-    // Short, non-sensitive reason (e.g. EAUTH, ETIMEDOUT, CONFIG) so failures can be diagnosed from the page.
-    const err = e as { code?: string; responseCode?: number };
-    const code =
-      (err?.code ?? (String(e).includes("must be set") ? "CONFIG" : "UNKNOWN")) +
-      (err?.responseCode ? ` ${err.responseCode}` : "");
+  const failed = await deliverCode(email, firstName, code);
+  if (failed) return { status: "error", message: failed, values };
+  return { status: "code", name: firstName, email, values, at: Date.now() };
+}
+
+export async function confirmCode(_prev: CodeState, formData: FormData): Promise<CodeState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const intent = String(formData.get("intent") ?? "verify");
+
+  const app = email ? await db.application.findUnique({ where: { email } }) : null;
+  if (!app) return { status: "error", message: "We couldn't find your application. Please fill in the form again." };
+  if (app.emailVerified) return { status: "verified" };
+
+  if (intent === "resend") {
+    if (app.verifySentAt && Date.now() - app.verifySentAt.getTime() < RESEND_COOLDOWN_MS) {
+      return { status: "error", message: "Please wait a minute before asking for another code." };
+    }
+    const { code, fields } = newCode(email);
+    const { count } = await db.application.updateMany({ where: { id: app.id, emailVerified: false }, data: fields });
+    if (!count) return { status: "verified" };
+    const failed = await deliverCode(email, firstNameOf(app.name), code);
+    if (failed) return { status: "error", message: failed };
+    return { status: "resent", message: `We sent a new code to ${email}.` };
+  }
+
+  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
+  if (code.length !== 6) return { status: "error", message: "Please enter the 6-digit code from the email." };
+  if (!app.verifyCodeHash || !app.verifyCodeExpires || app.verifyCodeExpires < new Date()) {
+    return { status: "error", message: "This code has expired. Tap “Send a new code” below." };
+  }
+
+  // Use up one attempt before checking, so parallel guesses can't exceed the limit.
+  const { count: allowed } = await db.application.updateMany({
+    where: { id: app.id, emailVerified: false, verifyCodeHash: app.verifyCodeHash, verifyAttempts: { lt: MAX_ATTEMPTS } },
+    data: { verifyAttempts: { increment: 1 } },
+  });
+  if (!allowed) return { status: "error", message: "Too many wrong codes. Tap “Send a new code” below." };
+
+  const expected = Buffer.from(app.verifyCodeHash, "hex");
+  const given = Buffer.from(hashCode(email, code), "hex");
+  if (!timingSafeEqual(expected, given)) {
+    const left = MAX_ATTEMPTS - app.verifyAttempts - 1;
     return {
       status: "error",
-      message: `We couldn't send a confirmation email right now. Please check your address and try again. (${code})`,
-      values,
+      message: left > 0
+        ? `That code isn't right. ${left} ${left === 1 ? "try" : "tries"} left.`
+        : "That code isn't right. Tap “Send a new code” below.",
     };
   }
 
-  return { status: "sent", name: firstName, email };
+  await db.application.update({
+    where: { id: app.id },
+    data: { emailVerified: true, verifyCodeHash: null, verifyCodeExpires: null, verifyAttempts: 0, createdAt: new Date() },
+  });
+  return { status: "verified" };
 }

@@ -22,30 +22,40 @@ function getTransport() {
   return transport;
 }
 
-// Public base URL for links in emails. Never taken from request headers, which a visitor controls.
-export function siteUrl() {
-  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/+$/, "");
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  return "http://localhost:3000";
-}
-
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
-export async function sendVerificationEmail(to: string, firstName: string, link: string) {
+export async function sendVerificationCode(to: string, firstName: string, code: string, minutesValid: number) {
   const hi = firstName ? `Hi ${firstName},` : "Hi,";
+  const name = escapeHtml(site.name);
   await getTransport().sendMail({
     from: { name: site.name, address: gmailUser() },
     to,
-    subject: `Confirm your email to finish your ${site.name} application`,
-    text: `${hi}\n\nThanks for applying to ${site.name}. Please confirm your email address to send your application:\n\n${link}\n\nThis link expires in 24 hours. If you didn't apply, you can ignore this email.\n`,
-    html: `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#0f172a">
-<p>${escapeHtml(hi)}</p>
-<p>Thanks for applying to ${escapeHtml(site.name)}. Please confirm your email address to send your application:</p>
-<p><a href="${escapeHtml(link)}" style="display:inline-block;background:#1f55e6;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">Confirm my email</a></p>
-<p style="color:#64748b;font-size:13px">Or paste this link into your browser:<br>${escapeHtml(link)}</p>
-<p style="color:#64748b;font-size:13px">This link expires in 24 hours. If you didn't apply, you can ignore this email.</p>
-</div>`,
+    // Code first in the subject so it shows in the inbox preview and phone notifications.
+    subject: `${code} is your ${site.name} confirmation code`,
+    text: `${hi}\n\nYour ${site.name} confirmation code is:\n\n${code}\n\nEnter it on the application form to send your application. It expires in ${minutesValid} minutes.\n\nIf you didn't apply, you can ignore this email.\n`,
+    html: `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f1f5f9">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0">
+<tr><td style="padding:32px 32px 8px;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;color:#0f172a">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="width:32px;height:32px;background:#1f55e6;border-radius:8px;color:#ffffff;font-weight:700;font-size:16px;text-align:center;vertical-align:middle">${escapeHtml(site.name[0])}</td>
+<td style="padding-left:10px;font-weight:700;font-size:16px">${name}</td>
+</tr></table>
+<p style="margin:28px 0 8px;font-size:15px">${escapeHtml(hi)}</p>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155">Here is your code to confirm your email and send your application:</p>
+<div style="background:#eef4ff;border:1px solid #d9e6ff;border-radius:12px;padding:20px;text-align:center;font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#1a45b8">${escapeHtml(code)}</div>
+<p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b">This code expires in ${minutesValid} minutes. Don't share it with anyone.</p>
+</td></tr>
+<tr><td style="padding:24px 32px 28px;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;line-height:1.6;color:#94a3b8;border-top:1px solid #f1f5f9">
+If you didn't apply to ${name}, you can safely ignore this email.
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
   });
 }

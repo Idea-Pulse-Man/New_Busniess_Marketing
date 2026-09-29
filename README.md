@@ -26,7 +26,6 @@ Set these in `.env` locally and in Vercel → Project → Settings → Environme
 | `AUTH_SECRET`  | Long random string (signs admin login cookies)                         |
 | `GMAIL_USER`   | Gmail address that sends the "confirm your email" messages             |
 | `GMAIL_APP_PASSWORD` | 16-character [app password](https://myaccount.google.com/apppasswords) for that account (needs 2-Step Verification) |
-| `SITE_URL`     | Public site address for links in emails, e.g. `https://yourapp.vercel.app` (optional on Vercel) |
 
 Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Vercel builds do **not**
 touch the database — apply new migrations in `prisma/migrations` yourself with `npm run db:migrate`
@@ -38,7 +37,6 @@ Row Level Security is enabled on all tables, so they are not readable through Su
 | URL             | Who            | What                                                          |
 | --------------- | -------------- | ------------------------------------------------------------- |
 | `/`             | Everyone       | Business intro, how it works, FAQ, application form           |
-| `/apply/verify` | Applicant      | Opened from the confirmation email; confirms the application  |
 | `/admin/login`  | Admin          | Log in with email + password                                  |
 | `/admin/verify` | Admin          | Authenticator code (first login: scan QR code to set it up)   |
 | `/admin`        | Admin          | Applications table                                            |
@@ -62,11 +60,12 @@ Only emails in the `ADMIN_EMAILS` list in `src/lib/session.ts` can log in.
 
 **Application form fields:** name, email, country, address, experience
 (“No experience” is the default and highlighted as welcome), optional note.
-One application per email. After submitting, the applicant gets an email with a confirmation link
-(valid 24 hours); only confirmed applications appear in the admin dashboard. An unconfirmed
-application is replaced if the same email applies again, so a fake entry can't block the real owner.
-Gmail allows about 500 sent emails per day. In `npm run dev` the confirmation link is also printed
-in the terminal, and the form still succeeds if the email can't be sent (e.g. a network that blocks
+One application per email. After submitting, the applicant is emailed a 6-digit code and types it
+into the form, right where the form was (valid 15 minutes, 5 tries, new code after 60 seconds);
+only confirmed applications appear in the admin dashboard. An unconfirmed application is replaced
+if the same email applies again, so a fake entry can't block the real owner.
+Gmail allows about 500 sent emails per day. In `npm run dev` the code is also printed in the
+terminal, and the form still moves on if the email can't be sent (e.g. a network that blocks
 `smtp.gmail.com`).
 
 **Admin dashboard:** search, filters (status, experience, country), sort, show/hide columns,
