@@ -17,6 +17,7 @@ model Application {
   email      String   @unique
   country    String
   address    String
+  whatsapp   String   @default("") // +<country code><number>, optional
   birthday   String   @default("") // YYYY-MM-DD
   experience String // none | under1 | 1to3 | 3plus
   experienceDetail String @default("") // previous jobs, in the applicant's words

@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { sendVerificationCode } from "@/lib/mail";
 import { ageFrom, COUNTRIES, EXPERIENCE_OPTIONS, MAX_AGE, MIN_AGE } from "@/lib/options";
 
-export type ApplyValues = Record<"name" | "email" | "birthday" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
+export type ApplyValues = Record<"name" | "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
 
 export type ApplyState =
   | { status: "idle" }
@@ -65,6 +65,14 @@ async function deliverCode(email: string, firstName: string, code: string): Prom
   }
 }
 
+// "+44 (7700) 900-123" → "+447700900123"; "" stays "" (optional field); null if it isn't a plausible
+// international number. A leading 00 counts as +.
+function normalizePhone(raw: string): string | null {
+  if (!raw) return "";
+  const compact = raw.replace(/[\s().-]/g, "").replace(/^00/, "+");
+  return /^\+[1-9]\d{6,14}$/.test(compact) ? compact : null;
+}
+
 function firstNameOf(name: string) {
   return name.split(" ")[0];
 }
@@ -72,13 +80,15 @@ function firstNameOf(name: string) {
 export async function submitApplication(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const whatsappRaw = String(formData.get("whatsapp") ?? "").trim();
+  const whatsapp = normalizePhone(whatsappRaw);
   const birthday = String(formData.get("birthday") ?? "").trim();
   const country = String(formData.get("country") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const experience = String(formData.get("experience") ?? "").trim();
   const experienceDetail = String(formData.get("experienceDetail") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
-  const values: ApplyValues = { name, email, birthday, country, address, experience, experienceDetail, note };
+  const values: ApplyValues = { name, email, whatsapp: whatsappRaw, birthday, country, address, experience, experienceDetail, note };
 
   // Honeypot: real people never see or fill this field.
   if (String(formData.get("website") ?? "").trim()) {
@@ -88,6 +98,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
   const fields: Record<string, string> = {};
   if (name.length < 2 || name.length > 100) fields.name = "Please enter your full name.";
   if (!EMAIL_RE.test(email) || email.length > 200) fields.email = "Please enter a valid email address.";
+  if (whatsapp === null) fields.whatsapp = "Please enter the number with your country code, e.g. +44 7700 900123.";
   const age = ageFrom(birthday);
   if (age === null) fields.birthday = "Please enter your date of birth.";
   else if (age < MIN_AGE) fields.birthday = `You must be at least ${MIN_AGE} years old to apply.`;
@@ -108,7 +119,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     fields: { email: "Already applied with this email." },
     values,
   };
-  const details = { name, email, birthday, country, address, experience, experienceDetail, note };
+  const details = { name, email, whatsapp: whatsapp ?? "", birthday, country, address, experience, experienceDetail, note };
   const firstName = firstNameOf(name);
 
   // An unconfirmed application for this email is replaced, so someone who typed another

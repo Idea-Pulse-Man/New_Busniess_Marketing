@@ -58,7 +58,7 @@ npm run admin -- reset-2fa <email>                      # lost phone: set up aut
 
 Only emails in the `ADMIN_EMAILS` list in `src/lib/session.ts` can log in.
 
-**Application form fields:** name, email, date of birth (16+), country, address, experience dropdown + optional
+**Application form fields:** name, email, optional WhatsApp number, date of birth (16+), country, address, experience dropdown + optional
 “previous jobs” text box
 (“No experience” is the default and highlighted as welcome), optional note.
 One application per email. After submitting, the applicant is emailed a 6-digit code and types it

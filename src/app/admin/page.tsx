@@ -17,6 +17,7 @@ export default async function AdminPage() {
     id: a.id,
     name: a.name,
     email: a.email,
+    whatsapp: a.whatsapp,
     birthday: a.birthday,
     country: a.country,
     address: a.address,

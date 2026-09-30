@@ -64,6 +64,19 @@ export function ApplyForm() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
+        <Field id="whatsapp" label="WhatsApp number (optional)" error={err.whatsapp}>
+          <input
+            id="whatsapp"
+            name="whatsapp"
+            type="tel"
+            defaultValue={v?.whatsapp}
+            className="input"
+            placeholder="+1 555 123 4567"
+            autoComplete="tel"
+            inputMode="tel"
+            maxLength={30}
+          />
+        </Field>
         <Field id="birthday" label="Date of birth" error={err.birthday}>
           <input
             id="birthday"
@@ -76,19 +89,20 @@ export function ApplyForm() {
             required
           />
         </Field>
-        <Field id="country" label="Country" error={err.country}>
-          <select id="country" name="country" className="input" defaultValue={v?.country ?? ""} required>
-            <option value="" disabled>
-              Select your country
-            </option>
-            {COUNTRIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </Field>
       </div>
+
+      <Field id="country" label="Country" error={err.country}>
+        <select id="country" name="country" className="input" defaultValue={v?.country ?? ""} required>
+          <option value="" disabled>
+            Select your country
+          </option>
+          {COUNTRIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field id="address" label="Address" error={err.address}>
         <input

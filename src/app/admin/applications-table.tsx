@@ -9,6 +9,7 @@ export type Row = {
   id: string;
   name: string;
   email: string;
+  whatsapp: string;
   birthday: string;
   country: string;
   address: string;
@@ -19,11 +20,12 @@ export type Row = {
   createdAt: string;
 };
 
-type ColumnKey = "email" | "birthday" | "country" | "address" | "experience" | "status" | "createdAt";
+type ColumnKey = "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "status" | "createdAt";
 type SortKey = "newest" | "oldest" | "name" | "country";
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "email", label: "Email" },
+  { key: "whatsapp", label: "WhatsApp" },
   { key: "birthday", label: "Birthday" },
   { key: "country", label: "Country" },
   { key: "address", label: "Address" },
@@ -121,7 +123,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
         (status === "all" || r.status === status) &&
         (experience === "all" || r.experience === experience) &&
         (country === "all" || r.country === country) &&
-        (!q || [r.name, r.email, r.country, r.address, r.experienceDetail, r.note].some((f) => f.toLowerCase().includes(q))),
+        (!q || [r.name, r.email, r.whatsapp, r.country, r.address, r.experienceDetail, r.note].some((f) => f.toLowerCase().includes(q))),
     );
     const byDate = (a: Row, b: Row) => a.createdAt.localeCompare(b.createdAt);
     list.sort(
@@ -196,10 +198,10 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
 
   function exportCsv() {
     const source = selected.size ? rows.filter((r) => selected.has(r.id)) : filtered;
-    const header = ["Name", "Email", "Birthday", "Country", "Address", "Experience", "Previous jobs", "Status", "Applied", "Note"];
+    const header = ["Name", "Email", "WhatsApp", "Birthday", "Country", "Address", "Experience", "Previous jobs", "Status", "Applied", "Note"];
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = source.map((r) =>
-      [r.name, r.email, r.birthday, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.experienceDetail, r.status, r.createdAt, r.note]
+      [r.name, r.email, r.whatsapp, r.birthday, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.experienceDetail, r.status, r.createdAt, r.note]
         .map(esc)
         .join(","),
     );
@@ -248,7 +250,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, email, country, address, jobs, notes…"
+            placeholder="Search name, email, phone, country, address, jobs, notes…"
             className="input pl-9"
             aria-label="Search applications"
           />
@@ -383,6 +385,11 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                       <a href={`mailto:${r.email}`} className="text-slate-600 hover:text-brand-700">{r.email}</a>
                     </td>
                   )}
+                  {visible.has("whatsapp") && (
+                    <td className="whitespace-nowrap px-3 py-3">
+                      <WhatsAppLink number={r.whatsapp} />
+                    </td>
+                  )}
                   {visible.has("birthday") && (
                     <td className="whitespace-nowrap px-3 py-3 text-slate-600">{birthdayText(r.birthday)}</td>
                   )}
@@ -438,6 +445,10 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                     <td colSpan={colSpan - 1} className="px-3 py-4">
                       <dl className="grid gap-3 text-sm sm:grid-cols-3">
                         <Detail label="Email" value={r.email} />
+                        <div>
+                          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">WhatsApp</dt>
+                          <dd className="mt-0.5"><WhatsAppLink number={r.whatsapp} /></dd>
+                        </div>
                         <Detail label="Birthday" value={birthdayText(r.birthday)} />
                         <Detail label="Country" value={r.country} />
                         <Detail label="Experience" value={EXPERIENCE_SHORT[r.experience] ?? r.experience} />
@@ -575,4 +586,13 @@ function birthdayText(birthday: string) {
   if (age === null) return "—";
   const date = new Date(`${birthday}T00:00:00Z`).toLocaleDateString(undefined, { timeZone: "UTC", dateStyle: "medium" });
   return `${date} (${age})`;
+}
+
+function WhatsAppLink({ number }: { number: string }) {
+  if (!number) return <span className="text-slate-400">—</span>;
+  return (
+    <a href={`https://wa.me/${number.slice(1)}`} target="_blank" rel="noreferrer" className="text-slate-600 hover:text-brand-700">
+      {number}
+    </a>
+  );
 }
