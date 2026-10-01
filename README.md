@@ -27,9 +27,10 @@ Set these in `.env` locally and in Vercel → Project → Settings → Environme
 | `GMAIL_USER`   | Gmail address that sends the "confirm your email" messages             |
 | `GMAIL_APP_PASSWORD` | 16-character [app password](https://myaccount.google.com/apppasswords) for that account (needs 2-Step Verification) |
 
-Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Vercel builds do **not**
-touch the database — apply new migrations in `prisma/migrations` yourself with `npm run db:migrate`
-(with `.env` pointing at Supabase) before deploying code that needs them.
+Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Every Vercel build (production
+and `dev` previews) applies pending migrations in `prisma/migrations` first (`vercel-build` script,
+uses `DIRECT_URL`); if a migration fails, the build fails and the previous version stays live.
+Local `npm run build` does not touch the database — run `npm run db:migrate` yourself if needed.
 Row Level Security is enabled on all tables, so they are not readable through Supabase's public API.
 
 ## Pages
