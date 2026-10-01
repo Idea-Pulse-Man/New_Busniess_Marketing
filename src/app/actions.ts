@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { formatCallTime, getBooking } from "@/lib/calendly";
 import { sendCallBooked, sendVerificationCode } from "@/lib/mail";
 import { ageFrom, COUNTRIES, EXPERIENCE_OPTIONS, MAX_AGE, MIN_AGE } from "@/lib/options";
+import { clientIp, isProxy } from "@/lib/proxycheck";
+import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
 
 export type ApplyValues = Record<"name" | "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
@@ -51,7 +53,7 @@ function newCode(email: string) {
 // Emails the code. Returns an error message for the applicant, or null when sent.
 async function deliverCode(email: string, firstName: string, code: string): Promise<string | null> {
   const dev = process.env.NODE_ENV !== "production";
-  // Local testing: the code is also printed, so the flow works even where Gmail is unreachable.
+  // Local testing: the code is also printed, so the flow works even without email set up.
   if (dev) console.log(`[dev] Confirmation code for ${email}: ${code}`);
   try {
     await sendVerificationCode(email, firstName, code, CODE_MINUTES);
@@ -120,6 +122,15 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
 
   if (Object.keys(fields).length) {
     return { status: "error", message: "Please check the highlighted fields.", fields, values };
+  }
+
+  // The VPN/proxy check can be switched off on the admin dashboard (Settings).
+  if ((await getSettings()).proxyCheck && (await isProxy(await clientIp()))) {
+    return {
+      status: "error",
+      message: "It looks like you're using a VPN or proxy. Please turn it off and send your application again.",
+      values,
+    };
   }
 
   const alreadyApplied: ApplyState = {
@@ -222,7 +233,7 @@ export async function confirmCode(_prev: CodeState, formData: FormData): Promise
 export type BookResult = { when: string | null; emailed: boolean };
 
 // Called by the embedded Calendly widget once the applicant has booked. The booking is looked up
-// through Calendly's API (so it can't be faked), saved, and the "Congratulations" email is sent.
+// through Calendly's API (so it can't be faked), saved, and the "call booked" email is sent.
 // The call is booked on Calendly either way, so failures here are only logged.
 export async function confirmBooking(emailRaw: string, inviteeUri: string): Promise<BookResult> {
   const email = String(emailRaw ?? "").trim().toLowerCase();

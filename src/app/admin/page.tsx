@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { mailProviderConfigured } from "@/lib/mail";
+import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
 import { logout } from "./auth-actions";
 import { ApplicationsTable, type Row } from "./applications-table";
+import { SettingsPanel } from "./settings-panel";
 
 export const metadata = { title: "Applications — Admin" };
 export const dynamic = "force-dynamic";
@@ -11,7 +14,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const email = await requireAdmin();
   // Unconfirmed emails may be fake or mistyped; admins only see applications whose email was confirmed.
-  const apps = await db.application.findMany({ where: { emailVerified: true }, orderBy: { createdAt: "desc" } });
+  const [apps, settings] = await Promise.all([
+    db.application.findMany({ where: { emailVerified: true }, orderBy: { createdAt: "desc" } }),
+    getSettings(),
+  ]);
 
   const rows: Row[] = apps.map((a) => ({
     id: a.id,
@@ -32,7 +38,7 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 font-bold">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
               {site.name[0]}
@@ -47,9 +53,13 @@ export default async function AdminPage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <main className="px-4 py-8 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-bold tracking-tight">Applications</h1>
         <p className="mt-1 text-sm text-slate-500">Review, search, approve or decline applicants.</p>
+        <SettingsPanel
+          settings={settings}
+          configured={{ gmail: mailProviderConfigured("gmail"), sendgrid: mailProviderConfigured("sendgrid") }}
+        />
         <ApplicationsTable rows={rows} />
       </main>
     </div>

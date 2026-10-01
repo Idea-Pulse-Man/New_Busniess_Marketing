@@ -22,22 +22,26 @@ export type Row = {
   createdAt: string;
 };
 
-type ColumnKey = "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "status" | "callAt" | "createdAt";
+type ColumnKey = "status" | "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "note" | "callAt" | "createdAt";
 type SortKey = "newest" | "oldest" | "name" | "country";
 
+// Status comes right after the name so it is always in view.
 const COLUMNS: { key: ColumnKey; label: string }[] = [
+  { key: "status", label: "Status" },
   { key: "email", label: "Email" },
   { key: "whatsapp", label: "WhatsApp" },
   { key: "birthday", label: "Birthday" },
   { key: "country", label: "Country" },
   { key: "address", label: "Address" },
   { key: "experience", label: "Experience" },
-  { key: "status", label: "Status" },
+  { key: "note", label: "Note" },
   { key: "callAt", label: "Call" },
   { key: "createdAt", label: "Applied" },
 ];
 
 const PAGE_SIZE = 50;
+// Keeps the Actions column in view when the table scrolls sideways.
+const STICKY_RIGHT = "sticky right-0 shadow-[-6px_0_6px_-6px_rgba(15,23,42,0.15)]";
 const REFRESH_MS = 10_000;
 const NEW_HIGHLIGHT_MS = 60_000;
 
@@ -325,7 +329,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-slate-200">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <table className="w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="w-10 px-4 py-3">
@@ -342,7 +346,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
               {COLUMNS.filter((c) => visible.has(c.key)).map((c) => (
                 <th key={c.key} className="whitespace-nowrap px-3 py-3">{c.label}</th>
               ))}
-              <th className="px-3 py-3 text-right">Actions</th>
+              <th className={`${STICKY_RIGHT} bg-slate-50 px-3 py-3 text-right`}>Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -358,10 +362,10 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                 <tr
                   className={
                     selected.has(r.id)
-                      ? "bg-brand-50/60"
+                      ? "bg-brand-50"
                       : newIds.has(r.id)
-                        ? "bg-emerald-50/70 transition-colors hover:bg-emerald-50"
-                        : "transition-colors hover:bg-slate-50"
+                        ? "bg-emerald-50 transition-colors"
+                        : "bg-white transition-colors hover:bg-slate-50"
                   }
                 >
                   <td className="px-4 py-3">
@@ -373,7 +377,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                       aria-label={`Select ${r.name}`}
                     />
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="min-w-28 px-3 py-3">
                     <button onClick={() => setExpanded(expanded === r.id ? null : r.id)} className="text-left font-medium text-slate-900 hover:text-brand-700">
                       {r.name}
                     </button>
@@ -384,9 +388,16 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                       </span>
                     )}
                   </td>
+                  {visible.has("status") && (
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLE[r.status]}`}>
+                        {cap(r.status)}
+                      </span>
+                    </td>
+                  )}
                   {visible.has("email") && (
                     <td className="px-3 py-3">
-                      <a href={`mailto:${r.email}`} className="text-slate-600 hover:text-brand-700">{r.email}</a>
+                      <a href={`mailto:${r.email}`} className="break-all text-slate-600 hover:text-brand-700">{r.email}</a>
                     </td>
                   )}
                   {visible.has("whatsapp") && (
@@ -399,25 +410,23 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                   )}
                   {visible.has("country") && <td className="whitespace-nowrap px-3 py-3 text-slate-600">{r.country}</td>}
                   {visible.has("address") && (
-                    <td className="max-w-56 truncate px-3 py-3 text-slate-600" title={r.address}>{r.address}</td>
+                    <td className="min-w-36 max-w-64 whitespace-pre-wrap break-words px-3 py-3 text-slate-600">{r.address}</td>
                   )}
                   {visible.has("experience") && (
-                    <td className="px-3 py-3">
+                    <td className="min-w-32 max-w-64 px-3 py-3">
                       <span className={`whitespace-nowrap ${r.experience === "none" ? "font-medium text-brand-700" : "text-slate-600"}`}>
                         {EXPERIENCE_SHORT[r.experience] ?? r.experience}
                       </span>
                       {r.experienceDetail && (
-                        <div className="max-w-56 truncate text-xs text-slate-400" title={r.experienceDetail}>
+                        <div className="mt-0.5 whitespace-pre-wrap break-words text-xs text-slate-500">
                           {r.experienceDetail}
                         </div>
                       )}
                     </td>
                   )}
-                  {visible.has("status") && (
-                    <td className="px-3 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLE[r.status]}`}>
-                        {cap(r.status)}
-                      </span>
+                  {visible.has("note") && (
+                    <td className="min-w-32 max-w-64 whitespace-pre-wrap break-words px-3 py-3 text-xs text-slate-600">
+                      {r.note || <span className="text-slate-400">—</span>}
                     </td>
                   )}
                   {visible.has("callAt") && (
@@ -428,7 +437,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                       {new Date(r.createdAt).toLocaleDateString()}
                     </td>
                   )}
-                  <td className="whitespace-nowrap px-3 py-3 text-right">
+                  <td className={`${STICKY_RIGHT} whitespace-nowrap bg-inherit px-3 py-3 text-right`}>
                     {r.status !== "approved" && (
                       <button disabled={pending} onClick={() => run([r.id], "approved")} className="rounded px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
                         Approve

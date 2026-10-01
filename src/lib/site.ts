@@ -9,7 +9,7 @@ export const site = {
   contactEmail: "goldenstar0124@gmail.com",
 
   // Applicants from this country book a short video call right after confirming their email, and
-  // get the "Congratulations" email once it's booked. Admins get a desktop notification for them.
+  // get the "call booked" email once it's booked. Admins get a desktop notification for them.
   interview: {
     country: "United States",
     calendlyUrl: "https://calendly.com/goldenstar0124/30min",

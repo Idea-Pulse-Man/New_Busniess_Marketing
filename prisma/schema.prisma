@@ -55,3 +55,11 @@ model Admin {
   lockedUntil  DateTime?
   createdAt    DateTime  @default(now())
 }
+
+// Site-wide switches admins change on the dashboard. Always a single row (id 1).
+model Settings {
+  id           Int      @id @default(1)
+  proxyCheck   Boolean  @default(true) // block applications from VPN / proxy IPs
+  mailProvider String   @default("gmail") // gmail | sendgrid
+  updatedAt    DateTime @updatedAt
+}

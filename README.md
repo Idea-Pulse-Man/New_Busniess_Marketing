@@ -24,8 +24,12 @@ Set these in `.env` locally and in Vercel → Project → Settings → Environme
 | `DATABASE_URL` | Supabase **transaction pooler** URL (port 6543) + `?pgbouncer=true`   |
 | `DIRECT_URL`   | Supabase **session pooler** URL (port 5432)                            |
 | `AUTH_SECRET`  | Long random string (signs admin login cookies)                         |
-| `GMAIL_USER`   | Gmail address that sends the "confirm your email" messages             |
+| `GMAIL_USER`   | Gmail address that sends the emails (when Gmail is chosen)             |
 | `GMAIL_APP_PASSWORD` | 16-character [app password](https://myaccount.google.com/apppasswords) for that account (needs 2-Step Verification) |
+| `SENDGRID_API_KEY` | SendGrid API key with Mail Send permission (when SendGrid is chosen) |
+| `SENDGRID_FROM` | Verified sender address in SendGrid, ideally on your own domain       |
+| `MAIL_REPLY_TO` | Optional: address applicants' replies go to                           |
+| `PROXYCHECK_KEY` | Optional [proxycheck.io](https://proxycheck.io) key for VPN/proxy blocking: 1,000 checks/day free (100/day without a key) |
 | `CALENDLY_TOKEN` | Calendly personal access token (Calendly → Integrations → API & Webhooks). Works on the free plan |
 
 Find the URLs in Supabase → **Connect** (top bar) → **ORMs** → Prisma. Every Vercel build (production
@@ -68,21 +72,33 @@ into the form, right where the form was (valid 15 minutes, 5 tries, new code aft
 only confirmed applications appear in the admin dashboard. An unconfirmed application is replaced
 if the same email applies again, so a fake entry can't block the real owner.
 
+**VPN / proxy block:** when the form is sent, the applicant's IP is checked with proxycheck.io; VPN,
+proxy and Tor IPs get an error asking them to turn it off. If the check can't run (service down,
+daily limit reached), the application goes through. Local `npm run dev` (localhost) isn't checked.
+
 **United States applicants — video call:** once their email is confirmed, applicants whose country is
 United States see the Calendly booking page (`calendly.com/goldenstar0124/30min`) right in the form,
 with their name and email filled in. When they book, the site looks the booking up through Calendly's
-API (needs `CALENDLY_TOKEN`), saves the call time, and emails them “🎉 Congratulations on your new
-opportunity” with the call date/time (in their time zone), WhatsApp, email and hiring manager.
+API (needs `CALENDLY_TOKEN`), saves the call time, and emails them “Your video call with Pulse
+Talent is booked” with the call date/time (in their time zone), hiring manager, email and WhatsApp.
 If they leave before booking, applying again with the same email takes them back to the booking step.
 The Calendly link, contact details and the country are in `site.interview` in `src/lib/site.ts`.
 
-Gmail allows about 500 sent emails per day. In `npm run dev` the code is also printed in the
-terminal, and the form still moves on if the email can't be sent (e.g. a network that blocks
-`smtp.gmail.com`).
+**Settings** (top of the admin dashboard, saved in the database):
+- **VPN / proxy check** on/off. When on, applications from VPN, proxy or Tor IPs are blocked.
+- **Send emails with** Gmail or SendGrid. A dot marks a provider whose environment variables are
+  missing. **Send test email to me** sends a test to the signed-in admin through the chosen provider.
+
+Gmail allows about 500 sent emails per day. For SendGrid, send from your own domain with domain
+authentication set up (SPF/DKIM); a @gmail.com sender through SendGrid usually lands in spam.
+In `npm run dev` the code is also printed in the terminal, and the form still moves on if the email
+can't be sent.
 
 **Admin dashboard:** search, filters (status, experience, country), sort, show/hide columns,
 row checkboxes + select-all (page, or all matching), bulk Approve / Decline / Mark pending / Delete,
-per-row Approve / Decline / Undo, click a name for full details, CSV export.
+per-row Approve / Decline / Undo, click a name for full details, CSV export. Every field has its own
+column (long addresses, previous jobs and notes wrap), and the Actions column stays pinned on the right
+when the table scrolls sideways.
 The list updates itself (every 10s while open, every minute in a background tab); new applications
 get a "New" badge and show as a count in the browser tab title. Click **Enable desktop alerts** (top
 right) once to get a desktop notification for each new United States application — this works while
