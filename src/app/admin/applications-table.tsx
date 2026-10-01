@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "r
 import { useRouter } from "next/navigation";
 import { deleteApplications, setStatus } from "./actions";
 import { ageFrom, EXPERIENCE_OPTIONS, EXPERIENCE_SHORT, STATUSES, type Status } from "@/lib/options";
-import { site } from "@/lib/site";
+import { isInterviewCountry } from "@/lib/site";
 
 export type Row = {
   id: string;
@@ -106,7 +106,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
     const added = rows.filter((r) => !known.has(r.id)).map((r) => r.id);
     if (!added.length) return;
     setNewIds((prev) => new Set([...prev, ...added]));
-    notifyDesktop(rows.filter((r) => added.includes(r.id) && r.country === site.interview.country));
+    notifyDesktop(rows.filter((r) => added.includes(r.id) && isInterviewCountry(r.country)));
     flash(`${added.length} new application${added.length === 1 ? "" : "s"}`);
     setTimeout(() => {
       setNewIds((prev) => new Set([...prev].filter((id) => !added.includes(id))));
@@ -545,7 +545,7 @@ function LiveStatus({ updatedAt, refreshing, onRefresh }: { updatedAt: number; r
   );
 }
 
-// Desktop notifications for new applications from the interview country. They show while this page
+// Desktop notifications for new applications from the interview countries. They show while this page
 // is open (a background tab is fine; it checks every minute there). The browser asks the admin once.
 function DesktopAlerts() {
   const [permission, setPermission] = useState<NotificationPermission | "unsupported" | null>(null);
@@ -553,7 +553,7 @@ function DesktopAlerts() {
 
   if (permission === null || permission === "unsupported") return null;
   if (permission === "granted") {
-    return <span title={`New applications from ${site.interview.country} pop up on your desktop`}>🔔 Desktop alerts on</span>;
+    return <span title="New applications from countries that book a video call pop up on your desktop">🔔 Desktop alerts on</span>;
   }
   if (permission === "denied") {
     return <span title="Allow notifications for this site in your browser's settings">🔕 Desktop alerts blocked</span>;

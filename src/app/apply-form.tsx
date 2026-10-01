@@ -398,7 +398,7 @@ function loadCalendly() {
   });
 }
 
-// Next step for applicants from the interview country: book a video call on Calendly.
+// Next step for applicants from an interview country: book a video call on Calendly.
 function BookStep({ name, fullName, email }: { name: string; fullName: string; email: string }) {
   const url = site.interview.calendlyUrl;
   const widgetRef = useRef<HTMLDivElement>(null);

@@ -8,10 +8,23 @@ export const site = {
   contactLabel: "Admin",
   contactEmail: "goldenstar0124@gmail.com",
 
-  // Applicants from this country book a short video call right after confirming their email, and
+  // Applicants from these countries book a short video call right after confirming their email, and
   // get the "call booked" email once it's booked. Admins get a desktop notification for them.
+  // Names must match COUNTRIES in src/lib/options.ts.
   interview: {
-    country: "United States",
+    countries: [
+      "United States", "Canada", "United Kingdom", "Australia",
+      "Mexico", "Brazil", "Argentina", "Colombia",
+      "Philippines", "Vietnam",
+      "Türkiye", "Georgia", "Armenia", "Azerbaijan", "Kazakhstan",
+      // Rest of Europe
+      "Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herzegovina", "Bulgaria",
+      "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece",
+      "Hungary", "Iceland", "Ireland", "Italy", "Kosovo", "Latvia", "Liechtenstein", "Lithuania",
+      "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands", "North Macedonia",
+      "Norway", "Poland", "Portugal", "Romania", "San Marino", "Serbia", "Slovakia", "Slovenia",
+      "Spain", "Sweden", "Switzerland", "Ukraine", "Vatican City",
+    ],
     calendlyUrl: "https://calendly.com/goldenstar0124/30min",
     whatsapp: "+1 (281) 849-9378",
     email: "Goldenstar0124@gmail.com",
@@ -82,3 +95,8 @@ export const site = {
     },
   ],
 };
+
+// Whether applicants from this country book a video call (see site.interview).
+export function isInterviewCountry(country: string) {
+  return site.interview.countries.includes(country);
+}

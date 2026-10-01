@@ -76,13 +76,13 @@ if the same email applies again, so a fake entry can't block the real owner.
 proxy and Tor IPs get an error asking them to turn it off. If the check can't run (service down,
 daily limit reached), the application goes through. Local `npm run dev` (localhost) isn't checked.
 
-**United States applicants — video call:** once their email is confirmed, applicants whose country is
-United States see the Calendly booking page (`calendly.com/goldenstar0124/30min`) right in the form,
+**Video call (US, Canada, UK, Australia, Mexico, Brazil, Argentina, Colombia, Philippines, Vietnam,
+Türkiye, Georgia, Armenia, Azerbaijan, Kazakhstan and Europe):** once their email is confirmed, applicants from these countries see the Calendly booking page (`calendly.com/goldenstar0124/30min`) right in the form,
 with their name and email filled in. When they book, the site looks the booking up through Calendly's
 API (needs `CALENDLY_TOKEN`), saves the call time, and emails them “Your video call with Pulse
 Talent is booked” with the call date/time (in their time zone), hiring manager, email and WhatsApp.
 If they leave before booking, applying again with the same email takes them back to the booking step.
-The Calendly link, contact details and the country are in `site.interview` in `src/lib/site.ts`.
+The Calendly link, contact details and the country list are in `site.interview` in `src/lib/site.ts`.
 
 **Settings** (top of the admin dashboard, saved in the database):
 - **VPN / proxy check** on/off. When on, applications from VPN, proxy or Tor IPs are blocked.
@@ -101,7 +101,7 @@ column (long addresses, previous jobs and notes wrap), and the Actions column st
 when the table scrolls sideways.
 The list updates itself (every 10s while open, every minute in a background tab); new applications
 get a "New" badge and show as a count in the browser tab title. Click **Enable desktop alerts** (top
-right) once to get a desktop notification for each new United States application — this works while
+right) once to get a desktop notification for each new application from a video-call country — this works while
 the dashboard is open in a tab, even in the background (checked every minute there). The **Call**
 column shows the video call time an applicant booked.
 

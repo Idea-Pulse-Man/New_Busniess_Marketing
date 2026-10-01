@@ -8,7 +8,7 @@ import { sendCallBooked, sendVerificationCode } from "@/lib/mail";
 import { ageFrom, COUNTRIES, EXPERIENCE_OPTIONS, MAX_AGE, MIN_AGE } from "@/lib/options";
 import { clientIp, isProxy } from "@/lib/proxycheck";
 import { getSettings } from "@/lib/settings";
-import { site } from "@/lib/site";
+import { isInterviewCountry } from "@/lib/site";
 
 export type ApplyValues = Record<"name" | "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
 
@@ -83,9 +83,9 @@ function firstNameOf(name: string) {
   return name.split(" ")[0];
 }
 
-// Applicants from the interview country book a video call once their email is confirmed.
+// Applicants from an interview country book a video call once their email is confirmed.
 function needsCall(app: { country: string; callAt: Date | null }) {
-  return app.country === site.interview.country && !app.callAt;
+  return isInterviewCountry(app.country) && !app.callAt;
 }
 
 export async function submitApplication(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
@@ -241,7 +241,7 @@ export async function confirmBooking(emailRaw: string, inviteeUri: string): Prom
   const none: BookResult = { when: null, emailed: false };
 
   const app = email ? await db.application.findUnique({ where: { email } }) : null;
-  if (!app?.emailVerified || app.country !== site.interview.country) return none;
+  if (!app?.emailVerified || !isInterviewCountry(app.country)) return none;
   // Same booking reported twice (e.g. the page was reloaded): don't email again.
   if (app.callInvitee === uri && app.callAt) return { when: formatCallTime(app.callAt, app.callTimezone), emailed: true };
 
