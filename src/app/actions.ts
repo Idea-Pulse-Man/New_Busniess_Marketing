@@ -1,6 +1,6 @@
 "use server";
 
-import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { formatCallTime, getBooking } from "@/lib/calendly";
@@ -29,34 +29,58 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CODE_MINUTES = 15;
 const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 60 * 1000;
+// A code with less time left than this isn't sent again; a new one is made instead.
+const REUSE_MIN_LEFT_MS = 5 * 60 * 1000;
+
+function authSecret() {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) throw new Error("AUTH_SECRET is not set");
+  return secret;
+}
 
 // Keyed hash, so a leaked database row can't be brute-forced back to the code offline.
 function hashCode(email: string, code: string) {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("AUTH_SECRET is not set");
-  return createHmac("sha256", secret).update(`${email}:${code}`).digest("hex");
+  return createHmac("sha256", authSecret()).update(`${email}:${code}`).digest("hex");
 }
 
-function newCode(email: string) {
-  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+// The code is derived from the email and its expiry time (unguessable without AUTH_SECRET), so the
+// same code can be emailed again while it's valid without storing it.
+function codeFor(email: string, expires: Date) {
+  const n = createHmac("sha256", authSecret()).update(`code:${email}:${expires.getTime()}`).digest().readUInt32BE(0);
+  return String(n % 1_000_000).padStart(6, "0");
+}
+
+type CodeFields = { verifyCodeHash: string | null; verifyCodeExpires: Date | null; verifyAttempts: number };
+
+// The code to email. Sending again (submit twice, "send a new code") repeats the current code while it
+// has time and tries left, so every email in that window works; otherwise a new code replaces it.
+function codeToSend(email: string, app?: CodeFields | null) {
+  const now = Date.now();
+  const left = app?.verifyCodeExpires ? app.verifyCodeExpires.getTime() - now : 0;
+  if (app?.verifyCodeHash && app.verifyCodeExpires && left > REUSE_MIN_LEFT_MS && app.verifyAttempts < MAX_ATTEMPTS) {
+    const code = codeFor(email, app.verifyCodeExpires);
+    // Codes made before codes were derived don't match; those get replaced.
+    if (hashCode(email, code) === app.verifyCodeHash) {
+      return { code, minutes: Math.ceil(left / 60_000), repeated: true, fields: { verifySentAt: new Date() } };
+    }
+  }
+  const expires = new Date(now + CODE_MINUTES * 60 * 1000);
+  const code = codeFor(email, expires);
   return {
     code,
-    fields: {
-      verifyCodeHash: hashCode(email, code),
-      verifyCodeExpires: new Date(Date.now() + CODE_MINUTES * 60 * 1000),
-      verifyAttempts: 0,
-      verifySentAt: new Date(),
-    },
+    minutes: CODE_MINUTES,
+    repeated: false,
+    fields: { verifyCodeHash: hashCode(email, code), verifyCodeExpires: expires, verifyAttempts: 0, verifySentAt: new Date() },
   };
 }
 
 // Emails the code. Returns an error message for the applicant, or null when sent.
-async function deliverCode(email: string, firstName: string, code: string): Promise<string | null> {
+async function deliverCode(email: string, firstName: string, code: string, minutes: number): Promise<string | null> {
   const dev = process.env.NODE_ENV !== "production";
   // Local testing: the code is also printed, so the flow works even without email set up.
   if (dev) console.log(`[dev] Confirmation code for ${email}: ${code}`);
   try {
-    await sendVerificationCode(email, firstName, code, CODE_MINUTES);
+    await sendVerificationCode(email, firstName, code, minutes);
     return null;
   } catch (e) {
     console.error("Failed to send verification email", e);
@@ -157,7 +181,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     return { status: "code", name: firstName, email, values, notice: "We sent you a code a moment ago.", at: Date.now() };
   }
 
-  const { code, fields: codeFields } = newCode(email);
+  const { code, minutes, fields: codeFields } = codeToSend(email, existing);
   const data = { ...details, ...codeFields };
   if (existing) {
     // Only ever overwrite an unconfirmed application, even if it was confirmed a moment ago.
@@ -173,7 +197,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     }
   }
 
-  const failed = await deliverCode(email, firstName, code);
+  const failed = await deliverCode(email, firstName, code, minutes);
   if (failed) return { status: "error", message: failed, values };
   return { status: "code", name: firstName, email, values, at: Date.now() };
 }
@@ -190,12 +214,15 @@ export async function confirmCode(_prev: CodeState, formData: FormData): Promise
     if (app.verifySentAt && Date.now() - app.verifySentAt.getTime() < RESEND_COOLDOWN_MS) {
       return { status: "error", message: "Please wait a minute before asking for another code." };
     }
-    const { code, fields } = newCode(email);
+    const { code, minutes, repeated, fields } = codeToSend(email, app);
     const { count } = await db.application.updateMany({ where: { id: app.id, emailVerified: false }, data: fields });
     if (!count) return { status: "verified", book: needsCall(app) };
-    const failed = await deliverCode(email, firstNameOf(app.name), code);
+    const failed = await deliverCode(email, firstNameOf(app.name), code, minutes);
     if (failed) return { status: "error", message: failed };
-    return { status: "resent", message: `We sent a new code to ${email}.` };
+    return {
+      status: "resent",
+      message: repeated ? `We sent your code to ${email} again. It's the same code as before.` : `We sent a new code to ${email}.`,
+    };
   }
 
   const code = String(formData.get("code") ?? "").replace(/\D/g, "");
