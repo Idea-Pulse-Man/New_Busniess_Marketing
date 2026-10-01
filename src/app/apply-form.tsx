@@ -265,9 +265,9 @@ function CodeStep({
           Thanks{name ? `, ${name}` : ""}! Your application is in.
         </h3>
         <p className="mt-2 text-emerald-800">
-          Your email is confirmed. We review every application personally and will reply by email, usually within 48
-          hours.
+          Your email is confirmed. We review every application personally and will reply by email within 48 hours.
         </p>
+        <SpamNotice />
       </div>
     );
   }
@@ -373,6 +373,17 @@ function CodeStep({
   );
 }
 
+// Shown once an application is complete: our emails sometimes land in spam.
+function SpamNotice() {
+  return (
+    <p className="mx-auto mt-5 max-w-md rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-900">
+      <span className="font-semibold">Check your spam folder.</span> Our reply may land in spam or junk. Please look
+      there over the next 48 hours, and if you find it, mark it &quot;Not spam&quot; so you don&apos;t miss what comes
+      next.
+    </p>
+  );
+}
+
 type CalendlyWindow = Window & {
   Calendly?: {
     initInlineWidget: (o: { url: string; parentElement: HTMLElement; prefill?: { name?: string; email?: string } }) => void;
@@ -466,6 +477,7 @@ function BookStep({ name, fullName, email }: { name: string; fullName: string; e
           </a>
           .
         </p>
+        <SpamNotice />
       </div>
     );
   }
