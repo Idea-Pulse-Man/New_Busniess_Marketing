@@ -17,16 +17,21 @@ export async function setStatus(ids: string[], status: Status) {
   if (!STATUSES.includes(status)) throw new Error("Invalid status");
   const list = cleanIds(ids);
   if (!list.length) return { count: 0 };
-  const { count } = await db.application.updateMany({ where: { id: { in: list } }, data: { status } });
+  const { count } = await db.application.updateMany({ where: { id: { in: list }, deletedAt: null }, data: { status } });
   revalidatePath("/admin");
   return { count };
 }
 
+// Deleting only hides applications from the dashboard; their information is kept, and the same
+// email can apply again.
 export async function deleteApplications(ids: string[]) {
   await requireAdmin();
   const list = cleanIds(ids);
   if (!list.length) return { count: 0 };
-  const { count } = await db.application.deleteMany({ where: { id: { in: list } } });
+  const { count } = await db.application.updateMany({
+    where: { id: { in: list }, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
   revalidatePath("/admin");
   return { count };
 }

@@ -191,7 +191,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
 
   function run(ids: string[], next: Status | "delete") {
     if (!ids.length) return;
-    if (next === "delete" && !confirm(`Permanently delete ${ids.length} application(s)?`)) return;
+    if (next === "delete" && !confirm(`Delete ${ids.length} application(s)? They'll be hidden from this list; their information is kept, and they can apply again.`)) return;
     startTransition(async () => {
       if (next === "delete") {
         const { count } = await deleteApplications(ids);

@@ -14,8 +14,9 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const email = await requireAdmin();
   // Unconfirmed emails may be fake or mistyped; admins only see applications whose email was confirmed.
+  // Deleted applications are kept in the database but not shown.
   const [apps, settings] = await Promise.all([
-    db.application.findMany({ where: { emailVerified: true }, orderBy: { createdAt: "desc" } }),
+    db.application.findMany({ where: { emailVerified: true, deletedAt: null }, orderBy: { createdAt: "desc" } }),
     getSettings(),
   ]);
 

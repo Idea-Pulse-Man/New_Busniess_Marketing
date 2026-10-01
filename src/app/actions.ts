@@ -61,7 +61,7 @@ async function deliverCode(email: string, firstName: string, code: string): Prom
   } catch (e) {
     console.error("Failed to send verification email", e);
     if (dev) return null;
-    await db.application.updateMany({ where: { email, emailVerified: false }, data: { verifySentAt: null } });
+    await db.application.updateMany({ where: { email, emailVerified: false, deletedAt: null }, data: { verifySentAt: null } });
     // Short, non-sensitive reason (e.g. EAUTH 535, ETIMEDOUT, CONFIG) so failures can be diagnosed from the page.
     const err = e as { code?: string; responseCode?: number };
     const reason =
@@ -144,7 +144,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
 
   // An unconfirmed application for this email is replaced, so someone who typed another
   // person's address can't stop the real owner from applying.
-  const existing = await db.application.findUnique({ where: { email } });
+  const existing = await db.application.findFirst({ where: { email, deletedAt: null } });
   if (existing?.emailVerified) {
     // Left before booking the call (e.g. closed the tab): pick up where they stopped.
     return needsCall(existing) ? { status: "book", name: firstName, fullName: name, email } : alreadyApplied;
@@ -152,7 +152,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
 
   // A code went out moments ago (e.g. they pressed submit twice): keep it, just save any edits.
   if (existing?.verifySentAt && Date.now() - existing.verifySentAt.getTime() < RESEND_COOLDOWN_MS) {
-    const { count } = await db.application.updateMany({ where: { email, emailVerified: false }, data: details });
+    const { count } = await db.application.updateMany({ where: { email, emailVerified: false, deletedAt: null }, data: details });
     if (!count) return alreadyApplied;
     return { status: "code", name: firstName, email, values, notice: "We sent you a code a moment ago.", at: Date.now() };
   }
@@ -161,7 +161,7 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
   const data = { ...details, ...codeFields };
   if (existing) {
     // Only ever overwrite an unconfirmed application, even if it was confirmed a moment ago.
-    const { count } = await db.application.updateMany({ where: { email, emailVerified: false }, data });
+    const { count } = await db.application.updateMany({ where: { email, emailVerified: false, deletedAt: null }, data });
     if (!count) return alreadyApplied;
   } else {
     try {
@@ -182,7 +182,7 @@ export async function confirmCode(_prev: CodeState, formData: FormData): Promise
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const intent = String(formData.get("intent") ?? "verify");
 
-  const app = email ? await db.application.findUnique({ where: { email } }) : null;
+  const app = email ? await db.application.findFirst({ where: { email, deletedAt: null } }) : null;
   if (!app) return { status: "error", message: "We couldn't find your application. Please fill in the form again." };
   if (app.emailVerified) return { status: "verified", book: needsCall(app) };
 
@@ -240,7 +240,7 @@ export async function confirmBooking(emailRaw: string, inviteeUri: string): Prom
   const uri = String(inviteeUri ?? "");
   const none: BookResult = { when: null, emailed: false };
 
-  const app = email ? await db.application.findUnique({ where: { email } }) : null;
+  const app = email ? await db.application.findFirst({ where: { email, deletedAt: null } }) : null;
   if (!app?.emailVerified || !isInterviewCountry(app.country)) return none;
   // Same booking reported twice (e.g. the page was reloaded): don't email again.
   if (app.callInvitee === uri && app.callAt) return { when: formatCallTime(app.callAt, app.callTimezone), emailed: true };

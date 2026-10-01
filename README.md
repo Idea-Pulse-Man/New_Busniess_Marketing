@@ -96,7 +96,9 @@ can't be sent.
 
 **Admin dashboard:** search, filters (status, experience, country), sort, show/hide columns,
 row checkboxes + select-all (page, or all matching), bulk Approve / Decline / Mark pending / Delete,
-per-row Approve / Decline / Undo, click a name for full details, CSV export. Every field has its own
+per-row Approve / Decline / Undo, click a name for full details, CSV export. **Delete** only hides
+applications from the dashboard: their information stays in the database, and the same email can apply
+again (as a new application, while the old one is kept). Every field has its own
 column (long addresses, previous jobs and notes wrap), and the Actions column stays pinned on the right
 when the table scrolls sideways.
 The list updates itself (every 10s while open, every minute in a background tab); new applications

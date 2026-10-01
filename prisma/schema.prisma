@@ -14,7 +14,8 @@ datasource db {
 model Application {
   id         String   @id @default(cuid())
   name       String
-  email      String   @unique
+  // Unique among applications that aren't deleted (partial index in migration 9_application_soft_delete).
+  email      String
   country    String
   address    String
   whatsapp   String   @default("") // +<country code><number>, optional
@@ -34,9 +35,14 @@ model Application {
   callAt       DateTime?
   callTimezone String    @default("") // the applicant's IANA time zone, from Calendly
   callInvitee  String?   @unique // Calendly invitee URI; one booking can't be claimed by two applications
+  // Set when an admin deletes the application: it's hidden from the dashboard but kept, and the
+  // same email can apply again as a new application.
+  deletedAt  DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([email])
+  @@index([deletedAt])
   @@index([emailVerified])
   @@index([status])
   @@index([createdAt])
