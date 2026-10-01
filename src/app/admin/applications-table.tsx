@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "r
 import { useRouter } from "next/navigation";
 import { deleteApplications, setStatus } from "./actions";
 import { ageFrom, EXPERIENCE_OPTIONS, EXPERIENCE_SHORT, STATUSES, type Status } from "@/lib/options";
+import { site } from "@/lib/site";
 
 export type Row = {
   id: string;
@@ -17,10 +18,11 @@ export type Row = {
   experienceDetail: string;
   note: string;
   status: Status;
+  callAt: string | null; // video call booked on Calendly
   createdAt: string;
 };
 
-type ColumnKey = "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "status" | "createdAt";
+type ColumnKey = "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "status" | "callAt" | "createdAt";
 type SortKey = "newest" | "oldest" | "name" | "country";
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
@@ -31,6 +33,7 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "address", label: "Address" },
   { key: "experience", label: "Experience" },
   { key: "status", label: "Status" },
+  { key: "callAt", label: "Call" },
   { key: "createdAt", label: "Applied" },
 ];
 
@@ -99,6 +102,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
     const added = rows.filter((r) => !known.has(r.id)).map((r) => r.id);
     if (!added.length) return;
     setNewIds((prev) => new Set([...prev, ...added]));
+    notifyDesktop(rows.filter((r) => added.includes(r.id) && r.country === site.interview.country));
     flash(`${added.length} new application${added.length === 1 ? "" : "s"}`);
     setTimeout(() => {
       setNewIds((prev) => new Set([...prev].filter((id) => !added.includes(id))));
@@ -198,10 +202,10 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
 
   function exportCsv() {
     const source = selected.size ? rows.filter((r) => selected.has(r.id)) : filtered;
-    const header = ["Name", "Email", "WhatsApp", "Birthday", "Country", "Address", "Experience", "Previous jobs", "Status", "Applied", "Note"];
+    const header = ["Name", "Email", "WhatsApp", "Birthday", "Country", "Address", "Experience", "Previous jobs", "Status", "Call", "Applied", "Note"];
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = source.map((r) =>
-      [r.name, r.email, r.whatsapp, r.birthday, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.experienceDetail, r.status, r.createdAt, r.note]
+      [r.name, r.email, r.whatsapp, r.birthday, r.country, r.address, EXPERIENCE_SHORT[r.experience] ?? r.experience, r.experienceDetail, r.status, r.callAt ?? "", r.createdAt, r.note]
         .map(esc)
         .join(","),
     );
@@ -416,6 +420,9 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                       </span>
                     </td>
                   )}
+                  {visible.has("callAt") && (
+                    <td className="whitespace-nowrap px-3 py-3 text-slate-600">{callText(r.callAt)}</td>
+                  )}
                   {visible.has("createdAt") && (
                     <td className="whitespace-nowrap px-3 py-3 text-slate-500" title={new Date(r.createdAt).toLocaleString()}>
                       {new Date(r.createdAt).toLocaleDateString()}
@@ -452,6 +459,7 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                         <Detail label="Birthday" value={birthdayText(r.birthday)} />
                         <Detail label="Country" value={r.country} />
                         <Detail label="Experience" value={EXPERIENCE_SHORT[r.experience] ?? r.experience} />
+                        <Detail label="Video call" value={callText(r.callAt)} />
                         <Detail label="Previous jobs" value={r.experienceDetail || "—"} wide />
                         <Detail label="Address" value={r.address} wide />
                         <Detail label="Note" value={r.note || "—"} wide />
@@ -502,6 +510,7 @@ function LiveStatus({ updatedAt, refreshing, onRefresh }: { updatedAt: number; r
 
   return (
     <div className="flex items-center justify-end gap-3 text-xs text-slate-500">
+      <DesktopAlerts />
       <span className="inline-flex items-center gap-1.5" title="The list updates automatically">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -525,6 +534,43 @@ function LiveStatus({ updatedAt, refreshing, onRefresh }: { updatedAt: number; r
       </button>
     </div>
   );
+}
+
+// Desktop notifications for new applications from the interview country. They show while this page
+// is open (a background tab is fine; it checks every minute there). The browser asks the admin once.
+function DesktopAlerts() {
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported" | null>(null);
+  useEffect(() => setPermission("Notification" in window ? Notification.permission : "unsupported"), []);
+
+  if (permission === null || permission === "unsupported") return null;
+  if (permission === "granted") {
+    return <span title={`New applications from ${site.interview.country} pop up on your desktop`}>🔔 Desktop alerts on</span>;
+  }
+  if (permission === "denied") {
+    return <span title="Allow notifications for this site in your browser's settings">🔕 Desktop alerts blocked</span>;
+  }
+  return (
+    <button
+      onClick={() => Notification.requestPermission().then(setPermission)}
+      className="rounded-md px-2 py-1 font-medium text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50"
+    >
+      Enable desktop alerts
+    </button>
+  );
+}
+
+function notifyDesktop(rows: Row[]) {
+  if (!rows.length || !("Notification" in window) || Notification.permission !== "granted") return;
+  for (const r of rows) {
+    const n = new Notification(`New application from ${r.country}`, {
+      body: `${r.name} · ${r.email}`,
+      tag: r.id,
+    });
+    n.onclick = () => {
+      window.focus();
+      n.close();
+    };
+  }
 }
 
 function Stat({ label, value, active, onClick }: { label: string; value: number; active: boolean; onClick: () => void }) {
@@ -586,6 +632,12 @@ function birthdayText(birthday: string) {
   if (age === null) return "—";
   const date = new Date(`${birthday}T00:00:00Z`).toLocaleDateString(undefined, { timeZone: "UTC", dateStyle: "medium" });
   return `${date} (${age})`;
+}
+
+// Booked video call, in the admin's local time.
+function callText(callAt: string | null) {
+  if (!callAt) return "—";
+  return new Date(callAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function WhatsAppLink({ number }: { number: string }) {

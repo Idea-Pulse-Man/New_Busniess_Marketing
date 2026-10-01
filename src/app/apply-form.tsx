@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { confirmCode, submitApplication, type ApplyState, type CodeState } from "./actions";
+import { confirmBooking, confirmCode, submitApplication, type ApplyState, type BookResult, type CodeState } from "./actions";
 import { COUNTRIES, EXPERIENCE_OPTIONS } from "@/lib/options";
+import { site } from "@/lib/site";
 
 const initial: ApplyState = { status: "idle" };
 const RESEND_SECONDS = 60;
@@ -15,11 +16,16 @@ export function ApplyForm() {
   // React resets the form after an action; feed back what was typed so nothing is lost.
   const v = state.status === "error" || state.status === "code" ? state.values : undefined;
 
+  if (state.status === "book") {
+    return <BookStep name={state.name} fullName={state.fullName} email={state.email} />;
+  }
+
   if (state.status === "code" && editing !== state) {
     return (
       <CodeStep
         key={state.at}
         name={state.name}
+        fullName={state.values.name}
         email={state.email}
         notice={state.notice}
         onChangeEmail={() => setEditing(state)}
@@ -200,11 +206,13 @@ const codeInitial: CodeState = { status: "idle" };
 
 function CodeStep({
   name,
+  fullName,
   email,
   notice,
   onChangeEmail,
 }: {
   name: string;
+  fullName: string;
   email: string;
   notice?: string;
   onChangeEmail: () => void;
@@ -242,6 +250,10 @@ function CodeStep({
     const t = setTimeout(() => setWait((w) => w - 1), 1000);
     return () => clearTimeout(t);
   }, [wait]);
+
+  if (state.status === "verified" && state.book) {
+    return <BookStep name={name} fullName={fullName} email={email} />;
+  }
 
   if (state.status === "verified") {
     return (
@@ -357,6 +369,138 @@ function CodeStep({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+type CalendlyWindow = Window & {
+  Calendly?: {
+    initInlineWidget: (o: { url: string; parentElement: HTMLElement; prefill?: { name?: string; email?: string } }) => void;
+  };
+};
+
+const CALENDLY_SCRIPT = "https://assets.calendly.com/assets/external/widget.js";
+
+// Loads Calendly's embed script once per page.
+function loadCalendly() {
+  const w = window as CalendlyWindow;
+  if (w.Calendly) return Promise.resolve(w.Calendly);
+  return new Promise<NonNullable<CalendlyWindow["Calendly"]>>((resolve, reject) => {
+    let script = document.querySelector<HTMLScriptElement>(`script[src="${CALENDLY_SCRIPT}"]`);
+    if (!script) {
+      script = document.createElement("script");
+      script.src = CALENDLY_SCRIPT;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    script.addEventListener("load", () => (w.Calendly ? resolve(w.Calendly) : reject(new Error("Calendly missing"))));
+    script.addEventListener("error", reject);
+  });
+}
+
+// Next step for applicants from the interview country: book a video call on Calendly.
+function BookStep({ name, fullName, email }: { name: string; fullName: string; email: string }) {
+  const url = site.interview.calendlyUrl;
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [failed, setFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [booked, setBooked] = useState<BookResult | null>(null);
+
+  useEffect(() => {
+    boxRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    let cancelled = false;
+    loadCalendly().then(
+      (calendly) => {
+        const el = widgetRef.current;
+        if (cancelled || !el) return;
+        el.innerHTML = "";
+        calendly.initInlineWidget({ url, parentElement: el, prefill: { name: fullName, email } });
+      },
+      () => !cancelled && setFailed(true),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [url, fullName, email]);
+
+  // The widget reports a finished booking with a message; the server confirms it with Calendly.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== "https://calendly.com" || e.data?.event !== "calendly.event_scheduled") return;
+      const invitee = e.data.payload?.invitee?.uri;
+      if (typeof invitee !== "string") return;
+      setSaving(true);
+      confirmBooking(email, invitee)
+        .catch(() => ({ when: null, emailed: false }))
+        .then((r) => {
+          setBooked(r);
+          setSaving(false);
+        });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [email]);
+
+  if (booked) {
+    return (
+      <div ref={boxRef} className="scroll-mt-24 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-2xl text-white">
+          🎉
+        </div>
+        <h3 className="text-xl font-semibold text-emerald-900">
+          Congratulations{name ? `, ${name}` : ""}! Your call is booked.
+        </h3>
+        {booked.when && <p className="mt-3 text-lg font-medium text-emerald-900">{booked.when}</p>}
+        <p className="mt-2 text-emerald-800">
+          {booked.emailed ? (
+            <>
+              We&apos;ve emailed the details to <span className="font-medium break-all">{email}</span>.
+            </>
+          ) : (
+            "Calendly will email you a confirmation with the details."
+          )}{" "}
+          Questions before the call? Message us on WhatsApp at {site.interview.whatsapp} or email{" "}
+          <a href={`mailto:${site.interview.email}`} className="font-medium underline">
+            {site.interview.email}
+          </a>
+          .
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={boxRef} className="scroll-mt-24">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-2xl text-white">
+          ✓
+        </div>
+        <h3 className="text-xl font-semibold text-slate-900">
+          Email confirmed{name ? `, ${name}` : ""}! One last step.
+        </h3>
+        <p className="mx-auto mt-2 max-w-md text-slate-600">
+          Pick a time for a short video call with our hiring manager, {site.interview.hiringManager}. We&apos;ll walk
+          you through the next steps.
+        </p>
+      </div>
+
+      {failed ? (
+        <p className="mt-6 text-center">
+          <a href={url} target="_blank" rel="noreferrer" className="btn btn-primary px-6 py-3 text-base">
+            Book your call →
+          </a>
+        </p>
+      ) : (
+        <div className="relative mt-4">
+          <div ref={widgetRef} className="h-[700px] min-w-[280px]" />
+          {saving && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-slate-700">
+              Confirming your booking…
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

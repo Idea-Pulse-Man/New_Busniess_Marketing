@@ -8,6 +8,16 @@ export const site = {
   contactLabel: "Admin",
   contactEmail: "goldenstar0124@gmail.com",
 
+  // Applicants from this country book a short video call right after confirming their email, and
+  // get the "Congratulations" email once it's booked. Admins get a desktop notification for them.
+  interview: {
+    country: "United States",
+    calendlyUrl: "https://calendly.com/goldenstar0124/30min",
+    whatsapp: "+1 (281) 849-9378",
+    email: "Goldenstar0124@gmail.com",
+    hiringManager: "Ciann",
+  },
+
   stats: [
     { value: "0", label: "Years of experience needed" },
     { value: "100%", label: "Remote-friendly roles" },

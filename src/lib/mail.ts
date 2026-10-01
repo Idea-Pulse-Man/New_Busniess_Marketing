@@ -59,3 +59,48 @@ If you didn't apply to ${name}, you can safely ignore this email.
 </body></html>`,
   });
 }
+
+// Sent once an applicant has booked their video call. `when` is the call time, already formatted.
+export async function sendCallBooked(to: string, name: string, when: string) {
+  const { whatsapp, email, hiringManager } = site.interview;
+  const details: [string, string][] = [
+    ["Date", when],
+    ["WhatsApp", whatsapp],
+    ["Email Address", email],
+    ["Hiring Manager", hiringManager],
+  ];
+  const intro =
+    "We will guide you through the next steps via a brief video call; if you have any further questions, please feel free to ask via WhatsApp or email.";
+  const brand = escapeHtml(site.name);
+  const rows = details
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:6px 0;width:130px;font-size:14px;color:#64748b;vertical-align:top">${label}:</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#0f172a">${escapeHtml(value)}</td></tr>`,
+    )
+    .join("");
+  await getTransport().sendMail({
+    from: { name: site.name, address: gmailUser() },
+    to,
+    subject: "🎉 Congratulations on your new opportunity",
+    text: `Hello ${name}\n\n${intro}\n\n${details.map(([l, v]) => `${l}: ${v}`).join("\n")}\n\nThanks.\n`,
+    html: `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f1f5f9">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0">
+<tr><td style="padding:32px;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;color:#0f172a">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="width:32px;height:32px;background:#1f55e6;border-radius:8px;color:#ffffff;font-weight:700;font-size:16px;text-align:center;vertical-align:middle">${escapeHtml(site.name[0])}</td>
+<td style="padding-left:10px;font-weight:700;font-size:16px">${brand}</td>
+</tr></table>
+<p style="margin:28px 0 8px;font-size:15px">Hello ${escapeHtml(name)}</p>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155">${intro}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef4ff;border:1px solid #d9e6ff;border-radius:12px;padding:14px 20px">${rows}</table>
+<p style="margin:24px 0 0;font-size:15px;color:#334155">Thanks.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
+  });
+}

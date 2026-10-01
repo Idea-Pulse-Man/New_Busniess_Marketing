@@ -3,19 +3,23 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { sendVerificationCode } from "@/lib/mail";
+import { formatCallTime, getBooking } from "@/lib/calendly";
+import { sendCallBooked, sendVerificationCode } from "@/lib/mail";
 import { ageFrom, COUNTRIES, EXPERIENCE_OPTIONS, MAX_AGE, MIN_AGE } from "@/lib/options";
+import { site } from "@/lib/site";
 
 export type ApplyValues = Record<"name" | "email" | "whatsapp" | "birthday" | "country" | "address" | "experience" | "experienceDetail" | "note", string>;
 
 export type ApplyState =
   | { status: "idle" }
   | { status: "code"; name: string; email: string; values: ApplyValues; notice?: string; at: number }
+  // Already confirmed, but the video call isn't booked yet.
+  | { status: "book"; name: string; fullName: string; email: string }
   | { status: "error"; message: string; fields?: Record<string, string>; values?: ApplyValues };
 
 export type CodeState =
   | { status: "idle" }
-  | { status: "verified" }
+  | { status: "verified"; book: boolean } // book: show the Calendly step next
   | { status: "resent"; message: string }
   | { status: "error"; message: string };
 
@@ -77,6 +81,11 @@ function firstNameOf(name: string) {
   return name.split(" ")[0];
 }
 
+// Applicants from the interview country book a video call once their email is confirmed.
+function needsCall(app: { country: string; callAt: Date | null }) {
+  return app.country === site.interview.country && !app.callAt;
+}
+
 export async function submitApplication(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -125,7 +134,10 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
   // An unconfirmed application for this email is replaced, so someone who typed another
   // person's address can't stop the real owner from applying.
   const existing = await db.application.findUnique({ where: { email } });
-  if (existing?.emailVerified) return alreadyApplied;
+  if (existing?.emailVerified) {
+    // Left before booking the call (e.g. closed the tab): pick up where they stopped.
+    return needsCall(existing) ? { status: "book", name: firstName, fullName: name, email } : alreadyApplied;
+  }
 
   // A code went out moments ago (e.g. they pressed submit twice): keep it, just save any edits.
   if (existing?.verifySentAt && Date.now() - existing.verifySentAt.getTime() < RESEND_COOLDOWN_MS) {
@@ -161,7 +173,7 @@ export async function confirmCode(_prev: CodeState, formData: FormData): Promise
 
   const app = email ? await db.application.findUnique({ where: { email } }) : null;
   if (!app) return { status: "error", message: "We couldn't find your application. Please fill in the form again." };
-  if (app.emailVerified) return { status: "verified" };
+  if (app.emailVerified) return { status: "verified", book: needsCall(app) };
 
   if (intent === "resend") {
     if (app.verifySentAt && Date.now() - app.verifySentAt.getTime() < RESEND_COOLDOWN_MS) {
@@ -169,7 +181,7 @@ export async function confirmCode(_prev: CodeState, formData: FormData): Promise
     }
     const { code, fields } = newCode(email);
     const { count } = await db.application.updateMany({ where: { id: app.id, emailVerified: false }, data: fields });
-    if (!count) return { status: "verified" };
+    if (!count) return { status: "verified", book: needsCall(app) };
     const failed = await deliverCode(email, firstNameOf(app.name), code);
     if (failed) return { status: "error", message: failed };
     return { status: "resent", message: `We sent a new code to ${email}.` };
@@ -204,5 +216,52 @@ export async function confirmCode(_prev: CodeState, formData: FormData): Promise
     where: { id: app.id },
     data: { emailVerified: true, verifyCodeHash: null, verifyCodeExpires: null, verifyAttempts: 0, createdAt: new Date() },
   });
-  return { status: "verified" };
+  return { status: "verified", book: needsCall(app) };
+}
+
+export type BookResult = { when: string | null; emailed: boolean };
+
+// Called by the embedded Calendly widget once the applicant has booked. The booking is looked up
+// through Calendly's API (so it can't be faked), saved, and the "Congratulations" email is sent.
+// The call is booked on Calendly either way, so failures here are only logged.
+export async function confirmBooking(emailRaw: string, inviteeUri: string): Promise<BookResult> {
+  const email = String(emailRaw ?? "").trim().toLowerCase();
+  const uri = String(inviteeUri ?? "");
+  const none: BookResult = { when: null, emailed: false };
+
+  const app = email ? await db.application.findUnique({ where: { email } }) : null;
+  if (!app?.emailVerified || app.country !== site.interview.country) return none;
+  // Same booking reported twice (e.g. the page was reloaded): don't email again.
+  if (app.callInvitee === uri && app.callAt) return { when: formatCallTime(app.callAt, app.callTimezone), emailed: true };
+
+  let booking;
+  try {
+    booking = await getBooking(uri);
+  } catch (e) {
+    console.error("Failed to look up Calendly booking", e);
+    return none;
+  }
+  if (!booking) return none;
+  const when = formatCallTime(booking.start, booking.timezone);
+
+  try {
+    // A new booking replaces an earlier one (they booked again to change the time).
+    const { count } = await db.application.updateMany({
+      where: { id: app.id, OR: [{ callInvitee: null }, { callInvitee: { not: uri } }] },
+      data: { callAt: booking.start, callTimezone: booking.timezone, callInvitee: uri },
+    });
+    if (!count) return { when, emailed: true };
+  } catch (e) {
+    // This booking is already attached to another application.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return none;
+    throw e;
+  }
+
+  try {
+    await sendCallBooked(app.email, app.name, when);
+    return { when, emailed: true };
+  } catch (e) {
+    console.error("Failed to send call-booked email", e);
+    return { when, emailed: false };
+  }
 }

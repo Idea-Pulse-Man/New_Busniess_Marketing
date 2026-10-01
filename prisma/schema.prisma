@@ -30,6 +30,10 @@ model Application {
   verifyCodeExpires DateTime?
   verifyAttempts    Int       @default(0) // wrong codes entered for the current code
   verifySentAt      DateTime? // throttles resends
+  // Video call booked on Calendly (applicants from the United States book one after confirming their email).
+  callAt       DateTime?
+  callTimezone String    @default("") // the applicant's IANA time zone, from Calendly
+  callInvitee  String?   @unique // Calendly invitee URI; one booking can't be claimed by two applications
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
