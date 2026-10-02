@@ -414,12 +414,15 @@ function loadCalendly() {
   });
 }
 
-// Next step for applicants from an interview country: book a video call on Calendly.
-function BookStep({ name, fullName, email }: { name: string; fullName: string; email: string }) {
+// Next step for applicants from an interview country: book a video call on Calendly. Also shown on
+// the /book page that the emailed booking link opens.
+export function BookStep({ name, fullName, email }: { name: string; fullName: string; email: string }) {
   const url = site.interview.calendlyUrl;
+  const newTabUrl = `${url}?${new URLSearchParams({ name: fullName, email })}`;
   const widgetRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [booked, setBooked] = useState<BookResult | null>(null);
 
@@ -435,15 +438,21 @@ function BookStep({ name, fullName, email }: { name: string; fullName: string; e
       },
       () => !cancelled && setFailed(true),
     );
+    // Hide the loading message even if Calendly never says it has loaded.
+    const t = setTimeout(() => setLoaded(true), 15_000);
     return () => {
       cancelled = true;
+      clearTimeout(t);
     };
   }, [url, fullName, email]);
 
-  // The widget reports a finished booking with a message; the server confirms it with Calendly.
+  // The widget reports that it has loaded and, later, a finished booking with messages; the server
+  // confirms the booking with Calendly.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e.origin !== "https://calendly.com" || e.data?.event !== "calendly.event_scheduled") return;
+      if (e.origin !== "https://calendly.com") return;
+      if (e.data?.event === "calendly.event_type_viewed" || e.data?.event === "calendly.profile_page_viewed") setLoaded(true);
+      if (e.data?.event !== "calendly.event_scheduled") return;
       const invitee = e.data.payload?.invitee?.uri;
       if (typeof invitee !== "string") return;
       setSaving(true);
@@ -520,19 +529,34 @@ function BookStep({ name, fullName, email }: { name: string; fullName: string; e
 
       {failed ? (
         <p className="mt-6 text-center">
-          <a href={url} target="_blank" rel="noreferrer" className="btn btn-primary px-6 py-3 text-base">
+          <a href={newTabUrl} target="_blank" rel="noreferrer" className="btn btn-primary px-6 py-3 text-base">
             Book your call →
           </a>
         </p>
       ) : (
-        <div className="relative mt-4">
-          <div ref={widgetRef} className="h-[700px] min-w-[280px]" />
-          {saving && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-slate-700">
-              Confirming your booking…
-            </div>
-          )}
-        </div>
+        <>
+          <div className="relative mt-4">
+            <div ref={widgetRef} className="h-[700px] min-w-[280px]" />
+            {!loaded && (
+              <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center gap-3 pt-24 text-slate-600">
+                <span className="h-8 w-8 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600" />
+                Loading the calendar…
+              </div>
+            )}
+            {saving && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-slate-700">
+                Confirming your booking…
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-center text-sm text-slate-500">
+            Calendar not showing?{" "}
+            <a href={newTabUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-600 hover:text-brand-700">
+              Open it in a new tab
+            </a>
+            . We&apos;ve also emailed you a link to book later.
+          </p>
+        </>
       )}
     </div>
   );

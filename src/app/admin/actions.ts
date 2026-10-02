@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { sendTestEmail } from "@/lib/mail";
+import { bookingLink } from "@/lib/booking";
+import { sendBookingLink, sendTestEmail } from "@/lib/mail";
 import { STATUSES, type Status } from "@/lib/options";
 import { MAIL_PROVIDERS, saveSettings, type MailProvider, type Settings } from "@/lib/settings";
+import { isInterviewCountry } from "@/lib/site";
 
 function cleanIds(ids: unknown) {
   if (!Array.isArray(ids)) return [];
@@ -46,6 +48,28 @@ export async function updateSettings(patch: { proxyCheck?: boolean; mailProvider
   }
   await saveSettings(next);
   revalidatePath("/admin");
+}
+
+// Emails the booking link again to applicants from an interview country who haven't booked their call.
+export async function sendBookingLinks(ids: string[]) {
+  await requireAdmin();
+  const list = cleanIds(ids);
+  if (!list.length) return { count: 0, failed: 0 };
+  const apps = await db.application.findMany({
+    where: { id: { in: list }, emailVerified: true, deletedAt: null, callAt: null },
+  });
+  let count = 0;
+  let failed = 0;
+  for (const app of apps.filter((a) => isInterviewCountry(a.country))) {
+    try {
+      await sendBookingLink(app.email, app.name, await bookingLink(app.id));
+      count++;
+    } catch (e) {
+      console.error("Failed to send booking link", e);
+      failed++;
+    }
+  }
+  return { count, failed };
 }
 
 // Emails the signed-in admin through the chosen provider. Returns an error message, or null when sent.

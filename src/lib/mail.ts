@@ -144,6 +144,43 @@ ${escapeHtml(footer)}
   });
 }
 
+// Sent to applicants from an interview country once their email is confirmed (and again from the
+// admin dashboard), so they can book their video call even if they left the page before booking.
+export async function sendBookingLink(to: string, name: string, link: string) {
+  const { whatsapp, hiringManager } = site.interview;
+  const intro = `Thanks for applying to ${site.name}. One last step: pick a time for a short video call with our hiring manager, ${hiringManager}. On the call we'll go over your application and the available roles.`;
+  const footer = `You're receiving this because you applied at ${site.name}. If that wasn't you, you can ignore this email.`;
+  const brand = escapeHtml(site.name);
+  await sendMail({
+    to,
+    subject: `Book your video call with ${site.name}`,
+    text: `Hi ${name},\n\n${intro}\n\nBook your call here:\n${link}\n\nQuestions? Reply to this email or message us on WhatsApp at ${whatsapp}.\n\n${site.name}\n\n--\n${footer}\n`,
+    html: `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f1f5f9">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0">
+<tr><td style="padding:32px;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;color:#0f172a">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="width:32px;height:32px;background:#1f55e6;border-radius:8px;color:#ffffff;font-weight:700;font-size:16px;text-align:center;vertical-align:middle">${escapeHtml(site.name[0])}</td>
+<td style="padding-left:10px;font-weight:700;font-size:16px">${brand}</td>
+</tr></table>
+<p style="margin:28px 0 8px;font-size:15px">Hi ${escapeHtml(name)},</p>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155">${escapeHtml(intro)}</p>
+<p style="margin:0;text-align:center"><a href="${escapeHtml(link)}" style="display:inline-block;background:#1f55e6;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 28px;border-radius:10px">Book your call</a></p>
+<p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#334155">Questions? Reply to this email or message us on WhatsApp at ${escapeHtml(whatsapp)}.</p>
+<p style="margin:16px 0 0;font-size:15px;color:#334155">${brand}</p>
+</td></tr>
+<tr><td style="padding:24px 32px 28px;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;line-height:1.6;color:#94a3b8;border-top:1px solid #f1f5f9">
+${escapeHtml(footer)}
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
+  });
+}
+
 // Sent from the admin dashboard to check the chosen provider works.
 export async function sendTestEmail(to: string) {
   const { mailProvider } = await getSettings();
