@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteApplications, setStatus } from "./actions";
+import { deleteApplications, sendBookingLinks, setStatus } from "./actions";
 import { ageFrom, EXPERIENCE_OPTIONS, EXPERIENCE_SHORT, STATUSES, type Status } from "@/lib/options";
 import { isInterviewCountry } from "@/lib/site";
 
@@ -201,6 +201,14 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
         flash(`${count} application(s) marked ${next}`);
       }
       setSelected(new Set());
+    });
+  }
+
+  function sendLink(r: Row) {
+    if (!confirm(`Email ${r.name} (${r.email}) the link to book their video call?`)) return;
+    startTransition(async () => {
+      const { count, failed } = await sendBookingLinks([r.id]);
+      flash(count ? `Booking link sent to ${r.email}` : failed ? "Couldn't send the email. Try again." : "Already booked");
     });
   }
 
@@ -430,7 +438,25 @@ export function ApplicationsTable({ rows }: { rows: Row[] }) {
                     </td>
                   )}
                   {visible.has("callAt") && (
-                    <td className="whitespace-nowrap px-3 py-3 text-slate-600">{callText(r.callAt)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+                      {!r.callAt && isInterviewCountry(r.country) ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
+                            Not booked
+                          </span>
+                          <button
+                            disabled={pending}
+                            onClick={() => sendLink(r)}
+                            title="Email them the link to book their video call"
+                            className="rounded px-1.5 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+                          >
+                            Send link
+                          </button>
+                        </span>
+                      ) : (
+                        callText(r.callAt)
+                      )}
+                    </td>
                   )}
                   {visible.has("createdAt") && (
                     <td className="whitespace-nowrap px-3 py-3 text-slate-500" title={new Date(r.createdAt).toLocaleString()}>

@@ -1,10 +1,12 @@
 "use server";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { after } from "next/server";
 import { Prisma } from "@prisma/client";
+import { bookingLink } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { formatCallTime, getBooking } from "@/lib/calendly";
-import { sendCallBooked, sendVerificationCode } from "@/lib/mail";
+import { sendBookingLink, sendCallBooked, sendVerificationCode } from "@/lib/mail";
 import { ageFrom, COUNTRIES, EXPERIENCE_OPTIONS, MAX_AGE, MIN_AGE } from "@/lib/options";
 import { clientIp, isProxy } from "@/lib/proxycheck";
 import { getSettings } from "@/lib/settings";
@@ -254,6 +256,12 @@ export async function confirmCode(_prev: CodeState, formData: FormData): Promise
     where: { id: app.id },
     data: { emailVerified: true, verifyCodeHash: null, verifyCodeExpires: null, verifyAttempts: 0, createdAt: new Date() },
   });
+  if (needsCall(app)) {
+    // In case they leave before booking: the link brings them back to the booking step. Sent after
+    // the response so the calendar shows without waiting for the email.
+    const link = await bookingLink(app.id);
+    after(() => sendBookingLink(app.email, app.name, link).catch((e) => console.error("Failed to send booking link", e)));
+  }
   return { status: "verified", book: needsCall(app) };
 }
 
