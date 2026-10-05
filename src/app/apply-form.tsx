@@ -378,6 +378,72 @@ function whatsappLink(text: string) {
   return `https://wa.me/${site.interview.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 }
 
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+      <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z" />
+    </svg>
+  );
+}
+
+// Pops up before the calendar: booking the call is required, and how to reach the hiring manager.
+// Closes on "Continue" or Escape; the calendar keeps loading behind it.
+function NextStepModal({ name, fullName, onContinue }: { name: string; fullName: string; onContinue: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const manager = site.interview.hiringManager;
+
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+  }, []);
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onContinue}
+      aria-labelledby="next-step-title"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-left shadow-2xl backdrop:bg-slate-900/60"
+    >
+      <div className="p-6 sm:p-8">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">Next step · Required</p>
+        <h3 id="next-step-title" className="mt-1 text-xl font-semibold text-slate-900">
+          Book your video call with {manager}
+        </h3>
+        <p className="mt-2 text-slate-600">
+          Your email is confirmed{name ? `, ${name}` : ""}. To continue your application, you must book a short video
+          call with our hiring manager, {manager}. Your application moves forward once the call is booked.
+        </p>
+
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-medium text-slate-900">Contact {manager} on WhatsApp or by email</p>
+          <div className="mt-3 flex flex-col gap-2">
+            <a
+              href={whatsappLink(
+                `Hi ${manager}, I'm ${fullName || name}. I just applied to ${site.name} and I'm booking my video call.`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1ebe5b]"
+            >
+              <WhatsAppIcon />
+              WhatsApp {site.interview.whatsapp}
+            </a>
+            <a href={`mailto:${site.interview.email}`} className="btn btn-ghost break-all">
+              Email {site.interview.email}
+            </a>
+          </div>
+        </div>
+
+        <form method="dialog" className="mt-6">
+          <button type="submit" autoFocus className="btn btn-primary w-full py-3 text-base">
+            Continue to book my call →
+          </button>
+        </form>
+      </div>
+    </dialog>
+  );
+}
+
 // Shown once an application is complete: our emails sometimes land in spam.
 function SpamNotice() {
   return (
@@ -425,6 +491,7 @@ export function BookStep({ name, fullName, email }: { name: string; fullName: st
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [booked, setBooked] = useState<BookResult | null>(null);
+  const [intro, setIntro] = useState(true);
 
   useEffect(() => {
     boxRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -501,9 +568,7 @@ export function BookStep({ name, fullName, email }: { name: string; fullName: st
           rel="noopener noreferrer"
           className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#1ebe5b]"
         >
-          <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true">
-            <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z" />
-          </svg>
+          <WhatsAppIcon />
           Send us a message on WhatsApp
         </a>
         <p className="mt-2 text-sm text-emerald-800">Say hi so we know you&apos;re ready for the call.</p>
@@ -514,6 +579,16 @@ export function BookStep({ name, fullName, email }: { name: string; fullName: st
 
   return (
     <div ref={boxRef} className="scroll-mt-24">
+      {intro && (
+        <NextStepModal
+          name={name}
+          fullName={fullName}
+          onContinue={() => {
+            setIntro(false);
+            boxRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+          }}
+        />
+      )}
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-2xl text-white">
           ✓
