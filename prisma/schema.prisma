@@ -66,6 +66,7 @@ model Admin {
 model Settings {
   id           Int      @id @default(1)
   proxyCheck   Boolean  @default(true) // block applications from VPN / proxy IPs
+  blockAccess  Boolean  @default(false) // block VPN / proxy and Russian visitors from the whole public site
   mailProvider String   @default("gmail") // gmail | sendgrid
   updatedAt    DateTime @updatedAt
 }

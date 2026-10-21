@@ -86,6 +86,12 @@ The Calendly link, contact details and the country list are in `site.interview` 
 
 **Settings** (top of the admin dashboard, saved in the database):
 - **VPN / proxy check** on/off. When on, applications from VPN, proxy or Tor IPs are blocked.
+- **Block site access** on/off (off by default). When on, visitors using a VPN, proxy or Tor, or from
+  Russia, can't open the site (`/` and `/book`) at all; they see a short "not available" message.
+  The country comes from Vercel's `x-vercel-ip-country` header (proxycheck.io elsewhere); the list
+  is `BLOCKED_COUNTRIES` in `src/lib/proxycheck.ts`. Every page view uses a proxycheck.io check
+  (each IP is remembered for an hour), so add `PROXYCHECK_KEY` before turning this on.
+  The admin pages are never blocked.
 - **Send emails with** Gmail or SendGrid. A dot marks a provider whose environment variables are
   missing. **Send test email to me** sends a test to the signed-in admin through the chosen provider.
 

@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { formatCallTime, getBooking } from "@/lib/calendly";
 import { sendBookingLink, sendCallBooked, sendVerificationCode } from "@/lib/mail";
 import { ageFrom, COUNTRIES, EXPERIENCE_OPTIONS, MAX_AGE, MIN_AGE } from "@/lib/options";
-import { clientIp, isProxy } from "@/lib/proxycheck";
+import { accessBlocked, BLOCKED_MESSAGES, clientIp, isProxy } from "@/lib/proxycheck";
 import { getSettings } from "@/lib/settings";
 import { isInterviewCountry } from "@/lib/site";
 
@@ -150,6 +150,10 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     return { status: "error", message: "Please check the highlighted fields.", fields, values };
   }
 
+  // "Block site access" (Settings) also turns away anyone who sends the form without the page.
+  const blocked = await accessBlocked();
+  if (blocked) return { status: "error", message: BLOCKED_MESSAGES[blocked], values };
+
   // The VPN/proxy check can be switched off on the admin dashboard (Settings).
   if ((await getSettings()).proxyCheck && (await isProxy(await clientIp()))) {
     return {
@@ -207,6 +211,9 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
 export async function confirmCode(_prev: CodeState, formData: FormData): Promise<CodeState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const intent = String(formData.get("intent") ?? "verify");
+
+  const blocked = await accessBlocked();
+  if (blocked) return { status: "error", message: BLOCKED_MESSAGES[blocked] };
 
   const app = email ? await db.application.findFirst({ where: { email, deletedAt: null } }) : null;
   if (!app) return { status: "error", message: "We couldn't find your application. Please fill in the form again." };

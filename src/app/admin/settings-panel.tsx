@@ -36,34 +36,30 @@ export function SettingsPanel({
   const current = PROVIDERS.find((p) => p.value === settings.mailProvider)!;
 
   return (
-    <section className="mt-6 grid gap-3 md:grid-cols-2">
-      {/* VPN / proxy check */}
-      <div className="flex items-start justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-900">VPN / proxy check</h2>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            {settings.proxyCheck
-              ? "On — applications sent through a VPN, proxy or Tor are blocked."
-              : "Off — anyone can apply, including through a VPN or proxy."}
-          </p>
-        </div>
-        <button
-          role="switch"
-          aria-checked={settings.proxyCheck}
-          aria-label="VPN / proxy check"
-          disabled={pending}
-          onClick={() => save({ proxyCheck: !settings.proxyCheck })}
-          className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
-            settings.proxyCheck ? "bg-brand-600" : "bg-slate-300"
-          }`}
-        >
-          <span
-            className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-              settings.proxyCheck ? "translate-x-5" : "translate-x-0.5"
-            }`}
-          />
-        </button>
-      </div>
+    <section className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <ToggleCard
+        title="VPN / proxy check"
+        on={settings.proxyCheck}
+        disabled={pending}
+        onToggle={() => save({ proxyCheck: !settings.proxyCheck })}
+        description={
+          settings.proxyCheck
+            ? "On — applications sent through a VPN, proxy or Tor are blocked."
+            : "Off — anyone can apply, including through a VPN or proxy."
+        }
+      />
+
+      <ToggleCard
+        title="Block site access"
+        on={settings.blockAccess}
+        disabled={pending}
+        onToggle={() => save({ blockAccess: !settings.blockAccess })}
+        description={
+          settings.blockAccess
+            ? "On — visitors using a VPN, proxy or Tor, or from Russia, can't open the site."
+            : "Off — anyone can open the site."
+        }
+      />
 
       {/* Email provider */}
       <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
@@ -108,5 +104,44 @@ export function SettingsPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function ToggleCard({
+  title,
+  description,
+  on,
+  disabled,
+  onToggle,
+}: {
+  title: string;
+  description: string;
+  on: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">{description}</p>
+      </div>
+      <button
+        role="switch"
+        aria-checked={on}
+        aria-label={title}
+        disabled={disabled}
+        onClick={onToggle}
+        className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
+          on ? "bg-brand-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+            on ? "translate-x-5" : "translate-x-0.5"
+          }`}
+        />
+      </button>
+    </div>
   );
 }
