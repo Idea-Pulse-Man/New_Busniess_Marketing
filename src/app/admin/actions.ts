@@ -38,10 +38,11 @@ export async function deleteApplications(ids: string[]) {
   return { count };
 }
 
-export async function updateSettings(patch: { proxyCheck?: boolean; mailProvider?: string }) {
+export async function updateSettings(patch: { proxyCheck?: boolean; blockAccess?: boolean; mailProvider?: string }) {
   await requireAdmin();
   const next: Partial<Settings> = {};
   if (typeof patch.proxyCheck === "boolean") next.proxyCheck = patch.proxyCheck;
+  if (typeof patch.blockAccess === "boolean") next.blockAccess = patch.blockAccess;
   if (patch.mailProvider !== undefined) {
     if (!MAIL_PROVIDERS.includes(patch.mailProvider as MailProvider)) throw new Error("Invalid mail provider");
     next.mailProvider = patch.mailProvider as MailProvider;

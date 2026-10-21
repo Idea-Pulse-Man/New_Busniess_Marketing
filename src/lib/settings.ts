@@ -4,9 +4,9 @@ import { db } from "@/lib/db";
 export const MAIL_PROVIDERS = ["gmail", "sendgrid"] as const;
 export type MailProvider = (typeof MAIL_PROVIDERS)[number];
 
-export type Settings = { proxyCheck: boolean; mailProvider: MailProvider };
+export type Settings = { proxyCheck: boolean; blockAccess: boolean; mailProvider: MailProvider };
 
-const DEFAULTS: Settings = { proxyCheck: true, mailProvider: "gmail" };
+const DEFAULTS: Settings = { proxyCheck: true, blockAccess: false, mailProvider: "gmail" };
 
 // The single settings row; defaults until an admin saves something.
 export async function getSettings(): Promise<Settings> {
@@ -14,6 +14,7 @@ export async function getSettings(): Promise<Settings> {
   if (!row) return DEFAULTS;
   return {
     proxyCheck: row.proxyCheck,
+    blockAccess: row.blockAccess,
     mailProvider: MAIL_PROVIDERS.includes(row.mailProvider as MailProvider) ? (row.mailProvider as MailProvider) : DEFAULTS.mailProvider,
   };
 }

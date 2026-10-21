@@ -2,7 +2,9 @@ import Link from "next/link";
 import { validBookingLink } from "@/lib/booking";
 import { formatCallTime } from "@/lib/calendly";
 import { db } from "@/lib/db";
+import { accessBlocked } from "@/lib/proxycheck";
 import { isInterviewCountry, site } from "@/lib/site";
+import { AccessBlocked } from "../access-blocked";
 import { BookStep } from "../apply-form";
 
 export const metadata = { title: `Book your call — ${site.name}`, robots: { index: false } };
@@ -10,6 +12,9 @@ export const dynamic = "force-dynamic";
 
 // Opened from the booking link we email to applicants from an interview country.
 export default async function BookPage({ searchParams }: { searchParams: Promise<{ id?: string; s?: string }> }) {
+  const blocked = await accessBlocked();
+  if (blocked) return <AccessBlocked reason={blocked} />;
+
   const { id = "", s = "" } = await searchParams;
   const app =
     id && s && validBookingLink(id, s)

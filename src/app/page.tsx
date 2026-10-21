@@ -1,7 +1,14 @@
+import { accessBlocked } from "@/lib/proxycheck";
 import { site } from "@/lib/site";
+import { AccessBlocked } from "./access-blocked";
 import { ApplyForm } from "./apply-form";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const blocked = await accessBlocked();
+  if (blocked) return <AccessBlocked reason={blocked} />;
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur">
