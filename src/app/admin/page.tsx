@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { mailProviderConfigured } from "@/lib/mail";
 import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
+import { LogoMark } from "../logo";
 import { logout } from "./auth-actions";
 import { ApplicationsTable, type Row } from "./applications-table";
 import { SettingsPanel } from "./settings-panel";
@@ -41,9 +42,7 @@ export default async function AdminPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 font-bold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              {site.name[0]}
-            </span>
+            <LogoMark />
             {site.name} <span className="font-normal text-slate-400">/ Admin</span>
           </Link>
           <div className="flex items-center gap-4 text-sm">

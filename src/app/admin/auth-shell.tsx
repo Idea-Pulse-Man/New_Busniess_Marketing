@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { site } from "@/lib/site";
+import { LogoMark } from "../logo";
 
 /** Centered card layout shared by the login and authenticator pages. */
 export function AuthShell({
@@ -17,9 +18,7 @@ export function AuthShell({
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-bold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-            {site.name[0]}
-          </span>
+          <LogoMark />
           {site.name} Admin
         </Link>
         <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">

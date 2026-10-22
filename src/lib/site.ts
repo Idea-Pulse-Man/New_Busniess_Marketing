@@ -1,7 +1,7 @@
 // All public-facing copy lives here. Edit freely — the landing page reads from this file.
 
 export const site = {
-  name: "Pulse Talent",
+  name: "Idea Plus",
   tagline: "Real work. Real pay. No experience required.",
   description:
     "We're a new kind of talent partner. We work with growing businesses that need reliable people, and we train and place motivated beginners into those roles — remotely, from anywhere.",
