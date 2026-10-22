@@ -1,6 +1,7 @@
 import { accessBlocked } from "@/lib/proxycheck";
 import { site } from "@/lib/site";
 import { AccessBlocked } from "./access-blocked";
+import { AnimationLine } from "./animation-line";
 import { ApplyForm } from "./apply-form";
 
 export const dynamic = "force-dynamic";
@@ -30,32 +31,35 @@ export default async function Home() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 to-white">
-          <div className="pointer-events-none absolute -right-40 -top-40 h-[480px] w-[480px] rounded-full bg-brand-100 blur-3xl" />
-          <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-20 sm:px-6 md:pt-28">
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-semibold text-brand-700 shadow-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <AnimationLine>
+          <div className="mx-auto max-w-6xl px-4 pb-20 pt-20 sm:px-6 md:pt-28">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Now accepting applications
             </span>
             <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
               {site.tagline}
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">{site.description}</p>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85">{site.description}</p>
             <div className="mt-10 flex flex-wrap gap-3">
-              <a href="#apply" className="btn btn-primary px-6 py-3 text-base">Apply in 1 minute →</a>
-              <a href="#about" className="btn btn-ghost px-6 py-3 text-base">Learn more</a>
+              <a href="#apply" className="btn bg-white px-6 py-3 text-base text-brand-700 shadow-sm hover:bg-brand-50">
+                Apply in 1 minute →
+              </a>
+              <a href="#about" className="btn border border-white/40 px-6 py-3 text-base text-white hover:bg-white/10">
+                Learn more
+              </a>
             </div>
 
-            <dl className="mt-16 grid grid-cols-2 gap-6 border-t border-slate-200 pt-10 md:grid-cols-4">
+            <dl className="mt-16 grid grid-cols-2 gap-6 border-t border-white/20 pt-10 md:grid-cols-4">
               {site.stats.map((s) => (
                 <div key={s.label}>
-                  <dt className="text-3xl font-bold text-brand-700">{s.value}</dt>
-                  <dd className="mt-1 text-sm text-slate-600">{s.label}</dd>
+                  <dt className="text-3xl font-bold text-white">{s.value}</dt>
+                  <dd className="mt-1 text-sm text-white/75">{s.label}</dd>
                 </div>
               ))}
             </dl>
           </div>
-        </section>
+        </AnimationLine>
 
         {/* About */}
         <section id="about" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-24 sm:px-6">

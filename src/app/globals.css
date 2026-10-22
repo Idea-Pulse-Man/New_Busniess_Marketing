@@ -37,3 +37,37 @@ body {
 @utility btn-ghost {
   @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
 }
+
+/* animation-line: blue gradient section with the particles.js canvas behind its content */
+#animation-line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #1488cc; /* fallback for old browsers */
+  background: linear-gradient(to right, #2b32b2, #1488cc);
+}
+
+#animation-line > .particles-js-canvas-el {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* In normal flow (not absolutely centered) so tall content never gets clipped on small screens */
+.animation-line__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  color: #fff;
+  pointer-events: none; /* let clicks reach the canvas (click adds particles) */
+}
+
+.animation-line__content a,
+.animation-line__content button {
+  pointer-events: auto;
+}
