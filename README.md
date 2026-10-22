@@ -79,8 +79,8 @@ daily limit reached), the application goes through. Local `npm run dev` (localho
 **Video call (US, Canada, UK, Australia, Mexico, Brazil, Argentina, Colombia, Philippines, Vietnam,
 Türkiye, Georgia, Armenia, Azerbaijan, Kazakhstan and Europe):** once their email is confirmed, applicants from these countries see the Calendly booking page (`calendly.com/goldenstar0124/30min`) right in the form,
 with their name and email filled in. When they book, the site looks the booking up through Calendly's
-API (needs `CALENDLY_TOKEN`), saves the call time, and emails them “Your video call with Pulse
-Talent is booked” with the call date/time (in their time zone), hiring manager, email and WhatsApp.
+API (needs `CALENDLY_TOKEN`), saves the call time, and emails them “Your video call with Idea
+Plus is booked” with the call date/time (in their time zone), hiring manager, email and WhatsApp.
 If they leave before booking, applying again with the same email takes them back to the booking step.
 The Calendly link, contact details and the country list are in `site.interview` in `src/lib/site.ts`.
 

@@ -6,6 +6,7 @@ import { accessBlocked } from "@/lib/proxycheck";
 import { isInterviewCountry, site } from "@/lib/site";
 import { AccessBlocked } from "../access-blocked";
 import { BookStep } from "../apply-form";
+import { LogoMark } from "../logo";
 
 export const metadata = { title: `Book your call — ${site.name}`, robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -58,9 +59,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-3xl items-center px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              {site.name[0]}
-            </span>
+            <LogoMark />
             {site.name}
           </Link>
         </div>

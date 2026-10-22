@@ -2,6 +2,7 @@ import { accessBlocked } from "@/lib/proxycheck";
 import { site } from "@/lib/site";
 import { AccessBlocked } from "./access-blocked";
 import { AnimationLine } from "./animation-line";
+import { Logo3D, LogoMark } from "./logo";
 import { ApplyForm } from "./apply-form";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +16,7 @@ export default async function Home() {
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <a href="#" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              {site.name[0]}
-            </span>
+            <LogoMark />
             {site.name}
           </a>
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
@@ -32,22 +31,27 @@ export default async function Home() {
       <main className="flex-1">
         {/* Hero */}
         <AnimationLine>
-          <div className="mx-auto max-w-6xl px-4 pb-20 pt-20 sm:px-6 md:pt-28">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Now accepting applications
-            </span>
-            <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
-              {site.tagline}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85">{site.description}</p>
-            <div className="mt-10 flex flex-wrap gap-3">
-              <a href="#apply" className="btn bg-white px-6 py-3 text-base text-brand-700 shadow-sm hover:bg-brand-50">
-                Apply in 1 minute →
-              </a>
-              <a href="#about" className="btn border border-white/40 px-6 py-3 text-base text-white hover:bg-white/10">
-                Learn more
-              </a>
+          <div className="mx-auto max-w-6xl px-4 pb-20 pt-12 sm:px-6 md:pt-20">
+            <div className="grid items-center gap-10 lg:grid-cols-[1fr_420px] lg:gap-16">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Now accepting applications
+                </span>
+                <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
+                  {site.tagline}
+                </h1>
+                <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85">{site.description}</p>
+                <div className="mt-10 flex flex-wrap gap-3">
+                  <a href="#apply" className="btn bg-white px-6 py-3 text-base text-brand-700 shadow-sm hover:bg-brand-50">
+                    Apply in 1 minute →
+                  </a>
+                  <a href="#about" className="btn border border-white/40 px-6 py-3 text-base text-white hover:bg-white/10">
+                    Learn more
+                  </a>
+                </div>
+              </div>
+              <Logo3D className="order-first mx-auto w-60 lg:order-none lg:w-full" />
             </div>
 
             <dl className="mt-16 grid grid-cols-2 gap-6 border-t border-white/20 pt-10 md:grid-cols-4">
