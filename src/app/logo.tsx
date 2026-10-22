@@ -15,23 +15,3 @@ export function LogoMark({ size = 32, className = "" }: { size?: number; classNa
     />
   );
 }
-
-// Full logo artwork floating in 3D (CSS only) for the landing page hero.
-export function Logo3D({ className = "" }: { className?: string }) {
-  return (
-    <div className={`logo-3d ${className}`}>
-      <div className="logo-3d__glow" />
-      <img
-        src="/logo-420.webp"
-        srcSet="/logo-420.webp 420w, /logo-840.webp 840w"
-        sizes="(min-width: 1024px) 420px, 240px"
-        width={420}
-        height={420}
-        alt={`${site.name} logo`}
-        fetchPriority="high"
-        decoding="async"
-        className="logo-3d__img"
-      />
-    </div>
-  );
-}

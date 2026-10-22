@@ -56,10 +56,10 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-white/10 bg-[#0d1033] text-white">
         <div className="mx-auto flex h-16 max-w-3xl items-center px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <LogoMark />
+            <LogoMark className="ring-white/15! shadow-amber-400/10!" />
             {site.name}
           </Link>
         </div>
