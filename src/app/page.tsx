@@ -2,7 +2,8 @@ import { accessBlocked } from "@/lib/proxycheck";
 import { site } from "@/lib/site";
 import { AccessBlocked } from "./access-blocked";
 import { AnimationLine } from "./animation-line";
-import { Logo3D, LogoMark } from "./logo";
+import { Crystal3D } from "./crystal-3d";
+import { LogoMark } from "./logo";
 import { ApplyForm } from "./apply-form";
 
 export const dynamic = "force-dynamic";
@@ -13,16 +14,17 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur">
+      {/* Deep indigo: the logo's dark tile blends in, and it flows into the blue hero below */}
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0d1033]/90 text-white backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <a href="#" className="flex items-center gap-2 font-bold tracking-tight">
-            <LogoMark />
+            <LogoMark className="ring-white/15! shadow-amber-400/10!" />
             {site.name}
           </a>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-            <a href="#about" className="hover:text-slate-900">About</a>
-            <a href="#how" className="hover:text-slate-900">How it works</a>
-            <a href="#faq" className="hover:text-slate-900">FAQ</a>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-300 md:flex">
+            <a href="#about" className="hover:text-white">About</a>
+            <a href="#how" className="hover:text-white">How it works</a>
+            <a href="#faq" className="hover:text-white">FAQ</a>
           </nav>
           <a href="#apply" className="btn btn-primary">Apply now</a>
         </div>
@@ -51,7 +53,7 @@ export default async function Home() {
                   </a>
                 </div>
               </div>
-              <Logo3D className="order-first mx-auto w-60 lg:order-none lg:w-full" />
+              <Crystal3D className="order-first mx-auto w-64 sm:w-80 lg:order-none lg:w-full" />
             </div>
 
             <dl className="mt-16 grid grid-cols-2 gap-6 border-t border-white/20 pt-10 md:grid-cols-4">
