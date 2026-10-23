@@ -1,6 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
-import { getSettings } from "@/lib/settings";
+import { getCachedSettings } from "@/lib/settings";
 
 // VPN / proxy detection through proxycheck.io. Works without a key (100 checks a day); a free
 // account key (PROXYCHECK_KEY) raises that to 1,000 a day.
@@ -65,7 +65,7 @@ export const BLOCKED_MESSAGES: Record<BlockReason, string> = {
 // Why this visitor isn't allowed on the public site, or null. Only applies while "Block site
 // access" is on (admin dashboard → Settings).
 export async function accessBlocked(): Promise<BlockReason | null> {
-  if (!(await getSettings()).blockAccess) return null;
+  if (!(await getCachedSettings()).blockAccess) return null;
   const ip = await clientIp();
   // Vercel tells us the country for free; fall back to proxycheck.io's answer elsewhere.
   const vercelCountry = (await headers()).get("x-vercel-ip-country")?.toUpperCase();
