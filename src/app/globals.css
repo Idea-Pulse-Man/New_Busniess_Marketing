@@ -91,4 +91,13 @@ body {
   pointer-events: auto; /* the hero content is click-through; the crystal is draggable */
   width: 100%;
   height: 100%;
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+/* Set once the lazily loaded scene has drawn its first frame. */
+.crystal-3d__canvas.is-ready {
+  opacity: 1;
+  transform: none;
 }

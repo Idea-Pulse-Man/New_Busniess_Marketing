@@ -19,6 +19,21 @@ export async function getSettings(): Promise<Settings> {
   };
 }
 
+// Same, but reused for up to 30 s so every landing-page view doesn't wait on a database round-trip.
+// Other server instances may see a saved change up to 30 s late; this one sees it immediately.
+const CACHE_MS = 30_000;
+let cached: { settings: Promise<Settings>; at: number } | null = null;
+
+export function getCachedSettings(): Promise<Settings> {
+  if (!cached || Date.now() - cached.at > CACHE_MS) {
+    const settings = getSettings();
+    cached = { settings, at: Date.now() };
+    settings.catch(() => (cached = null)); // don't keep a failed lookup around
+  }
+  return cached.settings;
+}
+
 export async function saveSettings(patch: Partial<Settings>) {
   await db.settings.upsert({ where: { id: 1 }, create: { id: 1, ...DEFAULTS, ...patch }, update: patch });
+  cached = null;
 }
