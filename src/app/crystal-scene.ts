@@ -36,8 +36,6 @@ export function mountCrystal(mount: HTMLElement, onReady: () => void) {
   const key = new THREE.DirectionalLight(0xffffff, 2.2);
   key.position.set(3, 5, 4);
   scene.add(key);
-  const core = new THREE.PointLight(TEAL, 18, 6);
-  scene.add(core);
 
   // Everything we create, so cleanup can dispose it.
   const disposables: { dispose: () => void }[] = [envMap];
@@ -46,13 +44,11 @@ export function mountCrystal(mount: HTMLElement, onReady: () => void) {
   const goldMat = track(new THREE.MeshStandardMaterial({ color: GOLD, metalness: 1, roughness: 0.28 }));
   const glassMat = track(
     new THREE.MeshPhysicalMaterial({
-      color: 0xa7f3e6,
-      emissive: TEAL,
-      emissiveIntensity: 0.3,
+      color: 0xffffff,
       metalness: 0,
       roughness: 0.05,
       transparent: true,
-      opacity: 0.24,
+      opacity: 0.12,
       clearcoat: 1,
       side: THREE.DoubleSide,
       depthWrite: false,
@@ -179,8 +175,6 @@ export function mountCrystal(mount: HTMLElement, onReady: () => void) {
     if (!reduceMotion) {
       crystal.position.y = Math.sin(t * 1.2) * 0.08;
       crystal.rotation.x = Math.sin(t * 0.5) * 0.08;
-      const pulse = 0.5 + 0.5 * Math.sin(t * 2);
-      core.intensity = 14 + pulse * 8;
     }
     renderer.render(scene, camera);
     if (first) {
