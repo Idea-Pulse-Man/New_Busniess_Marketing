@@ -91,12 +91,6 @@ export function mountCrystal(mount: HTMLElement, onReady: () => void) {
   [...nodes.values()].forEach((v, i) => nodeMesh.setMatrixAt(i, m.makeTranslation(v)));
   crystal.add(rods, nodeMesh);
 
-  // Glowing heart inside the glass.
-  const glowMat = track(
-    new THREE.MeshBasicMaterial({ color: TEAL, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }),
-  );
-  crystal.add(new THREE.Mesh(track(new THREE.SphereGeometry(0.75, 24, 16)), glowMat));
-
   // Pedestal: gold slab over a glowing teal band.
   const pedestal = new THREE.Group();
   const slab = new THREE.Mesh(track(new THREE.BoxGeometry(2.2, 0.18, 2.2)), goldMat);
@@ -186,7 +180,6 @@ export function mountCrystal(mount: HTMLElement, onReady: () => void) {
       crystal.position.y = Math.sin(t * 1.2) * 0.08;
       crystal.rotation.x = Math.sin(t * 0.5) * 0.08;
       const pulse = 0.5 + 0.5 * Math.sin(t * 2);
-      glowMat.opacity = 0.25 + pulse * 0.2;
       core.intensity = 14 + pulse * 8;
     }
     renderer.render(scene, camera);
