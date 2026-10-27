@@ -2,9 +2,8 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 const GOLD = 0xe8b23a;
-const TEAL = 0x2dd4bf;
 
-// Gold-framed glass crystal on a glowing pedestal: a real WebGL model of the brand mark.
+// Gold-framed glass crystal: a real WebGL model of the brand mark.
 // Spins slowly on its own; drag (mouse or touch) to turn it. Loaded on demand by Crystal3D so
 // three.js stays out of the page's initial bundle. Calls `onReady` after the first frame and
 // returns a cleanup function.
@@ -30,7 +29,7 @@ export function mountCrystal(mount: HTMLElement, onReady: () => void) {
 
   const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
   camera.position.set(0, 0.25, 7.4);
-  camera.lookAt(0, -0.25, 0);
+  camera.lookAt(0, 0, 0);
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.4));
   const key = new THREE.DirectionalLight(0xffffff, 2.2);
@@ -87,22 +86,8 @@ export function mountCrystal(mount: HTMLElement, onReady: () => void) {
   [...nodes.values()].forEach((v, i) => nodeMesh.setMatrixAt(i, m.makeTranslation(v)));
   crystal.add(rods, nodeMesh);
 
-  // Pedestal: gold slab over a glowing teal band.
-  const pedestal = new THREE.Group();
-  const slab = new THREE.Mesh(track(new THREE.BoxGeometry(2.2, 0.18, 2.2)), goldMat);
-  slab.position.y = -1.7;
-  const bandMat = track(new THREE.MeshBasicMaterial({ color: 0x5eead4, toneMapped: false }));
-  const band = new THREE.Mesh(track(new THREE.BoxGeometry(2.26, 0.1, 2.26)), bandMat);
-  band.position.y = -1.84;
-  const base = new THREE.Mesh(track(new THREE.BoxGeometry(2.2, 0.1, 2.2)), goldMat);
-  base.position.y = -1.94;
-  pedestal.add(slab, band, base);
-  const underGlow = new THREE.PointLight(TEAL, 6, 3);
-  underGlow.position.y = -1.6;
-  pedestal.add(underGlow);
-
   const model = new THREE.Group();
-  model.add(crystal, pedestal);
+  model.add(crystal);
   model.rotation.x = 0.12;
   scene.add(model);
 
